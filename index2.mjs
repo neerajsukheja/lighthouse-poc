@@ -1,10 +1,25 @@
 import fs from "fs";
 import path from "path";
-import puppeteer from "puppeteer";
+import puppeteer from "puppeteer-core"; // Use puppeteer-core
 import lighthouse from "lighthouse";
 import { launch as launchChrome } from "chrome-launcher"; // Named import for chrome-launcher
 
-const url = "https://www.make.com/en/login"; // Replace with your login URL
+const url = "https://md-ht-7.webhostbox.net:2083"; // Replace with your login URL
+
+const chromePath = {
+  mac: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+  linux: "/usr/bin/google-chrome",
+  windows: "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe", // Windows path (escape backslashes)
+};
+
+// Detect the current operating system
+const os = process.platform;
+const executablePath =
+  os === "darwin"
+    ? chromePath.mac
+    : os === "win32"
+    ? chromePath.windows
+    : chromePath.linux;
 
 async function runLighthouse(url) {
   let browser;
@@ -12,7 +27,7 @@ async function runLighthouse(url) {
 
   try {
     // Launch Puppeteer
-    browser = await puppeteer.launch({ headless: true });
+    browser = await puppeteer.launch({ headless: true, executablePath });
     const page = await browser.newPage();
 
     // Set viewport to desktop dimensions (1920x1080)
@@ -38,26 +53,25 @@ async function runLighthouse(url) {
     // Set values directly via evaluate
 
     // Automate login
-    /*
-    await page.type("input[name='email']", "neerafeo", {
+    await page.type("#user", "", {
       delay: 500,
     }); // Add delay to simulate human typing
-    await page.type("input[name='password']", "Not4any1!!", {
+    await page.type("#pass", "", {
       delay: 500,
     });
-    */
-
+    /*
     await page.evaluate(() => {
-      const emailInput = document.querySelector("input[name='email']");
-      const passwordInput = document.querySelector("input[name='password']");
+      const emailInput = document.querySelector("input[type='text']");
+      const passwordInput = document.querySelector("input[type='password']");
       if (emailInput) emailInput.value = "sdean";
       if (passwordInput) passwordInput.value = "ASimple1";
     });
+    */
     await page.screenshot({
       path: "screenshot-afterlogin0.png",
       fullPage: true,
     });
-    await page.click("button[type='submit']");
+    await page.click("#login_submit");
     await page.waitForNavigation();
     await page.screenshot({
       path: "screenshot-afterlogin1.png",

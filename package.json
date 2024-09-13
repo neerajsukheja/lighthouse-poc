@@ -12,6 +12,7 @@
   "dependencies": {
     "chrome-launcher": "^1.1.2",
     "lighthouse": "^12.2.1",
-    "puppeteer": "^23.3.0"
+    "puppeteer": "^23.3.0",
+    "puppeteer-core": "^23.3.0"
   }
 }
