@@ -11,8 +11,10 @@
   "license": "ISC",
   "dependencies": {
     "chrome-launcher": "^1.1.2",
+    "chromedriver": "^128.0.3",
     "lighthouse": "^12.2.1",
     "puppeteer": "^23.3.0",
-    "puppeteer-core": "^23.3.0"
+    "puppeteer-core": "^23.3.0",
+    "selenium-webdriver": "^4.24.0"
   }
 }

@@ -1,152 +1,61 @@
-import fs from "fs";
-import path from "path";
-import puppeteer from "puppeteer";
+import { Builder, By, until } from "selenium-webdriver";
+import chrome from "selenium-webdriver/chrome.js"; // Ensure .js is added
 import lighthouse from "lighthouse";
-import { launch as launchChrome } from "chrome-launcher"; // Named import for chrome-launcher
+import { launch } from "chrome-launcher";
+import fs from "fs";
 
-const url = "https://md-ht-7.webhostbox.net:2083"; // Replace with your login URL
-const urlsToTest = [
-  "https://md-ht-7.webhostbox.net:2083/cpsess1256618553/frontend/jupiter/mail/filters/managefilters.html",
-  "https://md-ht-7.webhostbox.net:2083/cpsess1256618553/frontend/jupiter/domains/index.html",
-  // Add more URLs here
-];
+const url = "YOUR_LOGIN_URL";
+const username = "YOUR_USERNAME";
+const password = "YOUR_PASSWORD";
 
-async function runLighthouse(url) {
-  let browser;
-  let chrome;
+async function runSeleniumAndLighthouse() {
+  let options = new chrome.Options();
+  options.addArguments(
+    "--disable-gpu",
+    "--no-sandbox",
+    "--disable-dev-shm-usage",
+    "--headless"
+  );
+
+  // Initialize Selenium WebDriver
+  let driver = new Builder()
+    .forBrowser("chrome")
+    .setChromeOptions(options)
+    .build();
 
   try {
-    // Launch Puppeteer
-    browser = await puppeteer.launch({ headless: true });
-    const page = await browser.newPage();
+    // Open login page
+    await driver.get(url);
 
-    // Set viewport to desktop dimensions (1920x1080)
-    await page.setViewport({
-      width: 1920,
-      height: 1080,
-      deviceScaleFactor: 1,
-      isMobile: false,
-      hasTouch: false,
-      isLandscape: true,
-    });
+    // Perform login (update selectors as per your login page)
+    await driver.findElement(By.name("username")).sendKeys(username);
+    await driver.findElement(By.name("password")).sendKeys(password);
+    await driver.findElement(By.css('button[type="submit"]')).click();
 
-    // Go to the login page
-    await page.goto(url, { waitUntil: "networkidle2" });
-    await page.screenshot({ path: "screenshot-login.png", fullPage: true });
+    // Wait for post-login page to load (update with a specific element or URL to wait for)
+    await driver.wait(until.urlContains("dashboard"), 15000); // Adjust 'dashboard' to your specific post-login page
 
-    // Click login button
-    //await page.waitForSelector("#login-btn-exp");
-    //await page.click("#login-btn-exp");
-
-    //await page.waitForSelector("input[type='text']"); // Wait for email input to be visible
-    //await page.waitForSelector("input[type='password']");
-    // Set values directly via evaluate
-
-    // Automate login
-    await page.type("#user", "neerafeo", {
-      delay: 500,
-    }); // Add delay to simulate human typing
-    await page.type("#pass", "Not4any1!!", {
-      delay: 500,
-    });
-    /*
-    await page.evaluate(() => {
-      const emailInput = document.querySelector("input[type='text']");
-      const passwordInput = document.querySelector("input[type='password']");
-      if (emailInput) emailInput.value = "sdean";
-      if (passwordInput) passwordInput.value = "ASimple1";
-    });
-    */
-    await page.screenshot({
-      path: "screenshot-afterlogin0.png",
-      fullPage: true,
-    });
-    await page.click("#login_submit");
-    await page.waitForNavigation();
-    await page.screenshot({
-      path: "screenshot-afterlogin1.png",
-      fullPage: true,
-    });
-    // Check if login was successful
-    const currentUrl = page.url();
-    if (!currentUrl.includes("frontend")) {
-      await page.screenshot({
-        path: "screenshot-afterlogin2.png",
-        fullPage: true,
-      });
-      console.log("Login failed");
-      return;
-    }
-
-    console.log("Login successful, running Lighthouse audit...");
+    const loggedInPageUrl = await driver.getCurrentUrl();
 
     // Launch Chrome for Lighthouse
-    chrome = await launchChrome({ chromeFlags: ["--headless"] });
+    const chromeFlags = ["--headless", "--disable-gpu", "--no-sandbox"];
+    const chromeInstance = await launch({ chromeFlags });
 
-    // Define Lighthouse configuration settings
-    const lighthouseConfig = {
-      extends: "lighthouse:default",
-      settings: {
-        emulatedFormFactor: "desktop",
-        screenEmulation: {
-          width: 1920,
-          height: 1080,
-          deviceScaleFactor: 1,
-        },
-      },
-    };
-    // Run Lighthouse
-    const results = await lighthouse(
-      currentUrl,
-      {
-        port: chrome.port,
-        output: ["json", "html"],
-        logLevel: "info",
-        onlyCategories: [
-          "performance",
-          "accessibility",
-          "best-practices",
-          "seo",
-        ],
-        extraHeaders: {
-          // Send cookies to Lighthouse for the authenticated session
-          Cookie: (await page.cookies())
-            .map((c) => `${c.name}=${c.value}`)
-            .join("; "),
-        },
-      },
-      lighthouseConfig
-    );
+    // Run Lighthouse against the logged-in page
+    const result = await lighthouse(loggedInPageUrl, {
+      port: chromeInstance.port,
+      output: "json",
+      onlyCategories: ["performance", "accessibility", "best-practices", "seo"], // Customize categories
+    });
 
-    const jsonReport = results.report[0];
-    const htmlReport = results.report[1];
+    fs.writeFileSync("lighthouse-report.json", result.report);
 
-    // Save JSON and HTML reports
-    const timestamp = Date.now();
-    fs.writeFileSync(
-      path.join(process.cwd(), `lighthouse-report-${timestamp}.json`),
-      jsonReport
-    );
-    console.log("Lighthouse JSON report saved.");
-
-    fs.writeFileSync(
-      path.join(process.cwd(), `lighthouse-report-${timestamp}.html`),
-      htmlReport
-    );
-    console.log("Lighthouse HTML report saved.");
-  } catch (err) {
-    console.error("Error running Lighthouse:", err);
+    console.log("Lighthouse report generated successfully!");
+  } catch (error) {
+    console.error("Error during process:", error);
   } finally {
-    // Close Chrome and Puppeteer
-    if (chrome) {
-      await chrome.kill();
-    }
-    if (browser) {
-      await browser.close();
-    }
+    await driver.quit();
   }
 }
 
-runLighthouse(url).catch((err) => {
-  console.error("Error running Lighthouse:", err);
-});
+runSeleniumAndLighthouse();

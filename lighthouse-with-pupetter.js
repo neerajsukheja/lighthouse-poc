@@ -53,10 +53,10 @@ async function runLighthouse(url) {
     // Set values directly via evaluate
 
     // Automate login
-    await page.type("#user", "", {
+    await page.type("#user", "neerafeo", {
       delay: 500,
     }); // Add delay to simulate human typing
-    await page.type("#pass", "", {
+    await page.type("#pass", "Not4any1!!", {
       delay: 500,
     });
     /*
