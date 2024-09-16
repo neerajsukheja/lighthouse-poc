@@ -1,15 +1,54 @@
-import { Builder, By } from "selenium-webdriver";
-import { launch } from "chrome-launcher";
+import { chromium } from "playwright";
+import fs from "fs/promises";
+import { launch as launchChrome } from "chrome-launcher"; // Named import for chrome-launcher
+import CDP from "chrome-remote-interface";
 import lighthouse from "lighthouse";
-import fs from "fs";
 import path from "path";
 
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+async function authenticateAndGetFinalUrl() {
+  const browser = await chromium.launch();
+  const page = await browser.newPage();
+  const loginUrl = "https://md-ht-7.webhostbox.net:2083";
 
-// Function to run Lighthouse
-async function runLighthouse(url, projectName) {
-  // Launch Chrome
-  const chrome = await launch({ chromeFlags: ["--headless"] });
+  // Go to the login page
+  await page.goto(loginUrl);
+
+  // Perform the login
+  await page.fill("#user", "neerafeo");
+  await page.fill("#pass", "Not4any1!!");
+  await page.click("#login_submit");
+
+  // Wait for navigation or successful login
+  await page.waitForNavigation();
+
+  // Capture the final URL after login
+  const finalUrl = page.url();
+
+  // Get cookies after login
+  const cookies = await page.context().cookies();
+  await browser.close();
+
+  return { finalUrl, cookies };
+}
+
+async function runLighthouse(url, cookies, projectName = "testProject") {
+  const chrome = await launchChrome({ chromeFlags: ["--headless"] });
+  const protocol = await CDP({ port: chrome.port });
+
+  // Set cookies in the new browser instance
+  await protocol.Network.setCookies({
+    cookies: cookies.map((cookie) => ({
+      name: cookie.name,
+      value: cookie.value,
+      domain: cookie.domain,
+      path: cookie.path,
+      expires: cookie.expires,
+      httpOnly: cookie.httpOnly,
+      secure: cookie.secure,
+    })),
+  });
+
+  await protocol.close();
 
   const lighthouseConfig = {
     extends: "lighthouse:default",
@@ -24,87 +63,57 @@ async function runLighthouse(url, projectName) {
   };
 
   const options = {
-    port: chrome.port,
+    port: chrome.port, // Use the same port for Lighthouse
     output: ["json", "html"],
     logLevel: "info",
     onlyCategories: ["performance", "accessibility", "best-practices", "seo"],
   };
 
+  const runnerResult = await lighthouse(url, options, lighthouseConfig);
+  const jsonReport = runnerResult.report[0];
+  const htmlReport = runnerResult.report[1];
+
+  const timestamp = Date.now();
+  const jsonDir = path.join(process.cwd(), "json");
+  const htmlDir = path.join(process.cwd(), "html");
+
+  // Create directories if they don't exist
+  if (!fs.existsSync(jsonDir)) {
+    fs.mkdirSync(jsonDir);
+  }
+  if (!fs.existsSync(htmlDir)) {
+    fs.mkdirSync(htmlDir);
+  }
+
+  // Save JSON report
+  fs.writeFileSync(
+    path.join(jsonDir, `${projectName}-${timestamp}.json`),
+    jsonReport
+  );
+  console.log("Lighthouse JSON report saved.");
+
+  // Save HTML report
+  fs.writeFileSync(
+    path.join(htmlDir, `${projectName}-${timestamp}.html`),
+    htmlReport
+  );
+  console.log("Lighthouse HTML report saved.");
+  await chrome.kill();
+
+  return runnerResult.report;
+}
+
+(async () => {
   try {
-    // Run Lighthouse
-    const results = await lighthouse(url, options, lighthouseConfig);
-    const jsonReport = results.report[0];
-    const htmlReport = results.report[1];
+    const { finalUrl, cookies } = await authenticateAndGetFinalUrl();
+    console.log("Final URL after login:", finalUrl);
 
-    const timestamp = Date.now();
-    const jsonDir = path.join(process.cwd(), "json");
-    const htmlDir = path.join(process.cwd(), "html");
+    const report = await runLighthouse(finalUrl, cookies);
 
-    // Create directories if they don't exist
-    if (!fs.existsSync(jsonDir)) {
-      fs.mkdirSync(jsonDir);
-    }
-    if (!fs.existsSync(htmlDir)) {
-      fs.mkdirSync(htmlDir);
-    }
-
-    // Save JSON report
-    fs.writeFileSync(
-      path.join(jsonDir, `${projectName}-${timestamp}.json`),
-      jsonReport
-    );
-    console.log("Lighthouse JSON report saved.");
-
-    // Save HTML report
-    fs.writeFileSync(
-      path.join(htmlDir, `${projectName}-${timestamp}.html`),
-      htmlReport
-    );
-    console.log("Lighthouse HTML report saved.");
+    // Save the report to a file
+    await fs.writeFile("lighthouse-report.html", report);
+    console.log("Lighthouse report generated successfully");
   } catch (error) {
-    console.error("Error running Lighthouse:", error);
-  } finally {
-    // Stop Chrome
-    await chrome.kill();
+    console.error("Error generating Lighthouse report:", error);
   }
-}
-
-// Main function to run the test
-async function example() {
-  const projectName = "myProject"; // Set your project name here
-  let driver = await new Builder().forBrowser("chrome").build();
-
-  try {
-    // Navigate to the login page
-    await driver.get("https://example.com"); // Replace with actual login URL
-
-    // Perform login
-    await driver.findElement(By.id("user")).sendKeys(""); // Replace with actual username field selector
-    await driver.findElement(By.id("pass")).sendKeys(""); // Replace with actual password field selector
-    await driver.findElement(By.id("login_submit")).click();
-
-    // Wait for the login to complete and redirect to the post-login page
-    // await driver.wait(until.elementLocated(By.id('someElementId')), 10000);
-    // await driver.wait(until.elementIsVisible(driver.findElement(By.id('someElementId'))), 10000);
-    // await driver.wait(until.urlContains("expected-url-part"), 10000);
-
-    // Navigate to the desired page
-    //await driver.get("https://example.com/dashboard"); // Replace with the post-login URL if necessary
-
-    // Wait for the login to complete
-    await sleep(10000); // Adjust sleep as necessary
-
-    // Get the current URL
-    const currentUrl = await driver.getCurrentUrl();
-    console.log(`Current page URL is: ${currentUrl}`);
-
-    // Run Lighthouse on the current URL
-    await runLighthouse(currentUrl, projectName);
-  } finally {
-    // Quit the browser after the automation
-    await driver.quit();
-  }
-}
-
-// Run the function
-example().catch((err) => console.error("Error:", err));
+})();
