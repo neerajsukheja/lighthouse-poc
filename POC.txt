@@ -1,0 +1,39 @@
+  Subject: Proposal to Address BDD Test Execution Issues via API Configuration Enhancement
+
+Dear [Recipient's Name],
+
+I hope this email finds you well. I am writing to bring to your attention a recurring challenge faced by the team during the execution of BDD test scenarios, and to propose a detailed solution that could help resolve this issue effectively.
+Problem Statement:
+
+The team has been encountering significant difficulties while executing BDD test scenarios. The primary reasons for test failures include:
+
+    Environments being down due to the unavailability or malfunction of downstream systems.
+    Test users being deleted or edited, which causes inconsistencies in test results.
+
+Currently, the Native team has successfully mitigated these issues by integrating a "Fuzz Gen Engine"—a mock data provider that acts as an intermediary layer between the UI and Backend (BE). They achieve this by configuring the relevant API in the environment-specific configuration files. However, the web team does not have a direct provision to manage or configure this API URL, preventing them from implementing a similar solution.
+Proposed Solution:
+
+To address this limitation in the web setup, we propose the following approach:
+
+    Modification of api.config.js file:
+    We will introduce a new variable, apiBaseUrl, within the api.config.js file. This variable will dynamically set the API URL based on the environment.
+
+    Environment-specific configuration via build.gradle:
+    The apiBaseUrl will be defined in the build.gradle file for each specific environment (e.g., pre-prod, testing, development), allowing seamless configuration.
+
+    Framework Team Update:
+    The framework team will need to modify the existing logic to:
+        First, check if the apiBaseUrl is provided.
+        If the apiBaseUrl is available, the API requests should be directed to the given URL.
+        If the apiBaseUrl is not available, the system should continue with the current logic, as per the existing workflow.
+
+Expected Outcome:
+
+This enhancement will allow the web team to utilize mock data in pre-production environments, reducing their reliance on downstream systems or the service virtualization portal. By integrating this change, we expect:
+
+    Fewer test failures caused by unavailable environments or manipulated test data.
+    Improved test execution consistency across different environments.
+
+We believe this solution will provide greater flexibility and stability in the execution of BDD tests, ensuring more reliable and accurate results. Your support in implementing these changes would be greatly appreciated.
+
+Please feel free to reach out if you have any questions or require further clarification.
