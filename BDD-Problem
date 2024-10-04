@@ -1,0 +1,11 @@
+The current execution of BDD (Behavior-Driven Development) scripts requires restarting the entire process from the beginning whenever a step in the script fails. This approach is inefficient, as even if a single step fails, the whole test suite must be re-executed from scratch. Consequently, developers face the following challenges:
+
+    Time Wastage: Each time a failure occurs, the entire BDD script needs to be re-run, leading to significant delays, especially in long test scenarios.
+
+    Redundant Effort: Often, previous steps have already passed successfully, but developers are forced to re-run them repeatedly when a failure occurs in any subsequent step.
+
+    Unpredictable Failures: Even if the test passes after restarting from the beginning, future steps may still fail, causing developers to re-run the process multiple times until all steps pass in a single execution.
+
+    Decreased Productivity: This manual re-execution of scripts hampers the productivity of developers, as they have to continually monitor the test process and intervene frequently to restart it.
+
+To resolve this issue, an enhanced execution mechanism is needed that allows the developer to resume the BDD script from the point of failure without re-running successful steps, thereby reducing execution time, effort, and potential frustration caused by repetitive failures.
