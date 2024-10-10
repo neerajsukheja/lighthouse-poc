@@ -1,0 +1,53 @@
+One-line Description:
+
+Optimize BDD Jenkins jobs by avoiding unnecessary npm installations and reducing job runtime.
+Problem Statement:
+
+BDD Jenkins jobs currently take an additional 50 minutes to 1 hour due to running npm install every time, regardless of changes to dependencies. This delay is largely caused by the workspace being deleted and node_modules being reinstalled from scratch. The goal is to avoid reinstalling dependencies unless the package.json file has been updated, thus significantly reducing the job execution time.
+
+
+To optimize the execution time of the BDD Jenkins jobs, we need to avoid the repeated execution of npm install unless the package.json file has changed. Below is a structured approach to handle this:
+Solution Outline
+
+    Remove the Workspace Deletion:
+        By default, Jenkins deletes the workspace before starting the job, but this is causing a reinstallation of npm packages every time. Removing this option will keep the previous workspace intact, including the node_modules directory.
+
+    Check if package.json is Updated:
+        Before running npm install, check if the package.json file has been updated since the last build.
+        If the file hasn't changed, skip npm install.
+        If the file has changed (indicating possible dependency changes), only then proceed with npm install.
+
+    Add Cache Mechanism (Optional):
+        Utilize Jenkins caching mechanisms, or third-party plugins like node-cache, to store node_modules between builds, further speeding up the process.
+
+Steps to Implement
+1. Remove the Delete Workspace Option
+
+    In the Jenkins job configuration:
+        Go to Build Environment section.
+        Uncheck the option "Delete workspace before build starts" or similar options that clean the workspace.
+
+2. Modify the Jenkins Pipeline Script
+
+
+Explanation:
+
+    Check package.json changes:
+        This stage uses git diff to check if the package.json file has changed in the last commit.
+        If package.json has been updated, the flag PACKAGE_JSON_CHANGED is set to "true".
+
+    Run npm install only when needed:
+        The npm install command is executed only if PACKAGE_JSON_CHANGED is "true". Otherwise, it will skip to the next stage.
+
+    Run BDD Automation:
+        The actual BDD tests will run after ensuring dependencies are properly installed (if required).
+
+3. Cache Node Modules (Optional)
+
+To further improve performance, you can leverage Jenkins' caching mechanism (or a plugin) to cache the node_modules directory:
+
+    Install Node.js Plugin:
+        Install the NodeJS Plugin from Jenkins if it’s not already installed.
+
+    Use Caching:
+        Jenkins provides a stash and unstash feature to preserve directories between builds.
