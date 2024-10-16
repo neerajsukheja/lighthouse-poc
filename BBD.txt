@@ -1,0 +1,136 @@
+const fs = require('fs-extra');
+const path = require('path');
+const glob = require('glob');
+const createCsvWriter = require('csv-writer').createObjectCsvWriter;
+
+// Function to extract relevant information from each .feature file
+function extractInfoFromFeature(content, filename) {
+    const scenarioDetails = [];
+    const scenarioRegex = /#Author:\s*(.+)\n#Jira:\s*(.+)\n(?:#Chrome:\s*(.+))?\n(?:#Firefox:\s*(.+))?\n(?:#AndroidChromeBrowser:\s*(.+))?\n(.+)\nScenario Outline:\s*(.+)/g;
+    
+    let match;
+    while ((match = scenarioRegex.exec(content)) !== null) {
+        const [
+            , author, jira, chromeUrl, firefoxUrl, androidChromeUrl, tags, scenarioTitle
+        ] = match;
+
+        // Parse the tags from the line
+        const parsedTags = tags.match(/@[\w\d]+/g) || [];
+
+        // Collect scenario details
+        scenarioDetails.push({
+            Filename: filename,
+            Author: author,
+            Jira: jira,
+            Chrome: chromeUrl || '',
+            Firefox: firefoxUrl || '',
+            AndroidChromeBrowser: androidChromeUrl || '',
+            Tags: parsedTags.join(', '),
+            Scenario: scenarioTitle.trim(),
+        });
+    }
+
+    return scenarioDetails;
+}
+
+// Function to search for all .feature files recursively in current directory
+function findFeatureFiles() {
+    return new Promise((resolve, reject) => {
+        glob('**/*.feature', (err, files) => {
+            if (err) {
+                return reject(err);
+            }
+            resolve(files);
+        });
+    });
+}
+
+// Function to read and process each .feature file
+async function processFeatureFiles() {
+    try {
+        const featureFiles = await findFeatureFiles();
+        const allScenarios = [];
+
+        for (const file of featureFiles) {
+            const content = await fs.readFile(file, 'utf-8');
+            const scenarios = extractInfoFromFeature(content, file);
+            allScenarios.push(...scenarios);
+        }
+
+        return allScenarios;
+    } catch (error) {
+        console.error('Error processing files:', error);
+    }
+}
+
+// Function to calculate scenario execution statistics
+function calculateStatistics(scenarios) {
+    const totalScenarios = scenarios.length;
+    
+    // Correctly count executed scenarios for each browser/device
+    const chromeExecuted = scenarios.filter(scenario => scenario.Chrome.trim() !== '').length;
+    const firefoxExecuted = scenarios.filter(scenario => scenario.Firefox.trim() !== '').length;
+    const androidExecuted = scenarios.filter(scenario => scenario.AndroidChromeBrowser.trim() !== '').length;
+
+    const executionPercentage = (executed, total) => ((executed / total) * 100).toFixed(2);
+
+    return {
+        totalScenarios,
+        chromeExecuted,
+        firefoxExecuted,
+        androidExecuted,
+        chromeExecutionPercentage: executionPercentage(chromeExecuted, totalScenarios),
+        firefoxExecutionPercentage: executionPercentage(firefoxExecuted, totalScenarios),
+        androidExecutionPercentage: executionPercentage(androidExecuted, totalScenarios)
+    };
+}
+
+// Function to write the report as a CSV file
+async function writeCsvReport(data, statistics) {
+    const csvWriter = createCsvWriter({
+        path: 'report.csv',
+        header: [
+            {id: 'Filename', title: 'Filename'},
+            {id: 'Author', title: 'Author'},
+            {id: 'Jira', title: 'Jira'},
+            {id: 'Chrome', title: 'Chrome'},
+            {id: 'Firefox', title: 'Firefox'},
+            {id: 'AndroidChromeBrowser', title: 'AndroidChromeBrowser'},
+            {id: 'Tags', title: 'Tags'},
+            {id: 'Scenario', title: 'Scenario'}
+        ]
+    });
+
+    try {
+        // Write the actual data
+        await csvWriter.writeRecords(data);
+
+        // Append total stats to the report
+        const summaryRows = [
+            { Author: 'Total Scenarios', Chrome: statistics.totalScenarios, Firefox: statistics.totalScenarios, AndroidChromeBrowser: statistics.totalScenarios },
+            { Author: 'Scenarios Executed', Chrome: statistics.chromeExecuted, Firefox: statistics.firefoxExecuted, AndroidChromeBrowser: statistics.androidExecuted },
+            { Author: 'Execution Percentage', Chrome: `${statistics.chromeExecutionPercentage}%`, Firefox: `${statistics.firefoxExecutionPercentage}%`, AndroidChromeBrowser: `${statistics.androidExecutionPercentage}%` }
+        ];
+
+        await csvWriter.writeRecords(summaryRows);
+
+        console.log('CSV report generated: report.csv');
+    } catch (error) {
+        console.error('Error writing CSV:', error);
+    }
+}
+
+// Main function to execute the steps
+async function generateReport() {
+    const scenarios = await processFeatureFiles();
+    if (scenarios && scenarios.length > 0) {
+        const statistics = calculateStatistics(scenarios);
+
+        await writeCsvReport(scenarios, statistics);
+    } else {
+        console.log('No scenarios found in feature files.');
+    }
+}
+
+// Execute the report generation
+generateReport();
