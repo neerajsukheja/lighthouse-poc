@@ -22,8 +22,8 @@ const parseFeatureFile = (filePath) => {
   const content = fs.readFileSync(filePath, "utf-8");
   const lines = content.split("\n");
   const scenarios = [];
-  const metadata = {};
   let tags = []; // Array to hold tags
+  let metadata = {}; // Object to hold metadata
   let inFeatureSection = false; // Flag to start processing after the Feature line
 
   lines.forEach((line) => {
@@ -53,10 +53,11 @@ const parseFeatureFile = (filePath) => {
       const scenario = line.replace("Scenario Outline:", "").trim();
       scenarios.push({
         scenario,
-        metadata: { ...metadata },
+        metadata: { ...metadata }, // Spread the metadata to store it for this scenario
         tags: tags.join(" "),
       });
       tags = []; // Reset tags for the next scenario
+      metadata = {}; // Reset metadata for the next scenario
     }
   });
 
