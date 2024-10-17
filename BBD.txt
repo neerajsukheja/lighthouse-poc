@@ -188,6 +188,14 @@ const percentageRecord = {
 
 records.push(totalRecord, executedRecord, percentageRecord);
 
+// Function to escape commas by enclosing in double quotes
+const escapeField = (field) => {
+  if (typeof field === "string" && field.includes(",")) {
+    return `"${field}"`; // Wrap the field in double quotes
+  }
+  return field;
+};
+
 // Function to convert records to CSV format
 const generateCSV = (records) => {
   const header = [
@@ -207,16 +215,16 @@ const generateCSV = (records) => {
 
   records.forEach((record) => {
     const row = [
-      record.NUM,
-      record["File Name"],
-      record.Scenario,
-      record.Author,
-      record.Tags,
-      record.Jira,
-      record.Chrome,
-      record.Firefox,
-      record.AndroidChromeBrowser,
-      record.iPhoneSafariBrowser,
+      escapeField(record.NUM),
+      escapeField(record["File Name"]),
+      escapeField(record.Scenario),
+      escapeField(record.Author),
+      escapeField(record.Tags),
+      escapeField(record.Jira),
+      escapeField(record.Chrome),
+      escapeField(record.Firefox),
+      escapeField(record.AndroidChromeBrowser),
+      escapeField(record.iPhoneSafariBrowser),
     ];
     csvRows.push(row.join(",")); // Convert record to CSV row
   });
