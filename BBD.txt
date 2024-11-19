@@ -1,9 +1,19 @@
-Hi Karthik,
+I hope you are doing well.
 
-As per our earlier discussion, I wanted to understand the reasoning behind your team’s decision to delete the workspace after every Jenkins job. This approach is causing the npm install process to start from scratch each time, which takes around 40-50 minutes.
+The team is still facing challenges in acquiring the proper test data for writing BDD scenarios. Given this, I’d like to propose a plan for the next sprint that ensures we continue progressing effectively.
+Options for Next Sprint:
 
-From my side, I’ve tested an alternative where the workspace isn’t deleted, and instead, we add a logic to only run npm install if there is any change in the package.json or package-lock.json files. This effectively omits the need to install node packages every time, bringing down the overall time required to run the BDD scripts in Jenkins.
+    Shift Focus to Development Work: We could take on more development tasks, such as InterFI LOB or pending development in the DDA-to-DDA flow. This would help maintain productivity while the test data issues are being resolved.
 
-In my testing, this change has been working smoothly and has significantly improved the total job runtime. I believe this could be a valuable optimization, and I’d like to hear your thoughts on the current setup and if we can explore this approach further.
+    Proceed with Testing Stories Using Mock Data: If we decide to continue with the testing stories, the team will test locally using mock data for now.
 
-Looking forward to your feedback.
+Options for Addressing Test Data Challenges:
+
+While we work to get a dedicated resource for assisting with test data, I’ve outlined two potential solutions:
+
+    Configure Virtual Data Using Service Virtualization Portal:
+        We will require support from the backend (BE) team to configure the necessary endpoints and map our feature environment with the Service Virtualization Portal.
+    Engage with TDMP Team:
+        The team can connect with the TDMP team to learn how to use the utility for tweaking the data to fit our test logic requirements, allowing us to integrate this into our BDD test scripts.
+
+Please let me know your thoughts on the proposed approach and if there are any preferences or additional considerations we should account for. We are committed to finding the best way forward to support our development and testing needs efficiently.
