@@ -37,3 +37,19 @@ When the BE job runs, it will fetch the pre-built UI WAR, merge it with the BE J
 This will reduce build time, improve efficiency, and allow developers to test UI changes quickly without waiting for BE rebuilds.
 
 Let me know if you have any questions.
+
+
+
+Key Discussion Points:
+Stories Readiness:
+
+The stories will be created and groomed in accordance with the shared development plan.
+Any deviations in story creation from this plan will directly affect the project deadlines. It is crucial to stick to the outlined plan for maintaining the schedule.
+Backend Team Support & Impact on UI Team:
+
+Due to limited or no support from the Backend team, the UI team will proceed with implementing the stories using mock data and API agreements until mid-February.
+This approach will require additional work in the future, as all features will need to be retested once the actual APIs are integrated.
+Testing Strategy:
+
+For test scenarios involving the same code logic, only a select few relevant test cases will be executed.
+This approach is adopted to optimize testing efforts, as the UI code for all test scenarios will remain the same.
