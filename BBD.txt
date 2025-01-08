@@ -1,12 +1,13 @@
-1. Serverless API mocking library for Web Application
+Hi [Dare Team],
 
-2. Jenkin Job Optimization
- a. Running test cases concurrently -  Instead of running all tests sequentially, we can use Jest's --maxWorkers option to parallelize the test execution in the same jenkins build.
+Thanks a lot for your response!
 
- b. Node Modules Caching - We can use the "Pipeline Caching" or "workspace caching" to avoid reinstalling dependencies every time the build runs. This can be done by caching the node_modules directory between builds.
+To clarify, the points I shared were just a proposed solution. My primary intention was to explore potential ways to accelerate the UI build process and optimize the turnaround time for deploying UI changes.
 
-3. No-code BDD automation testing for UI and even for BE API's.
+Regarding your comment on the first proposal, I would like to understand a bit more about why it’s mandatory for the RTL teams to be aware of every UI release build. In my suggestion, we could design the wibtp-web Jenkins job to automatically search for the latest version of the WAR file from the artifact. If no artifact is found, the system could then trigger the UI build asynchronously. This approach would also apply to the UI job, where it would look for the BE JAR artifact before triggering the UI build. This should help streamline the process and reduce any dependency on manual communication.
 
-4. Automated Dependency Management Tool to streamline the process of managing package updates, resolving vulnerabilities, and ensuring compatibility
+Again, the key goal here is to optimize the turnaround time for UI builds so that we can deploy UI changes faster.
 
-5. AI-Driven Refactoring Assistant for enhancing code quality, maintainability, and developer productivity.
+Additionally, I wanted to mention that a similar mechanism was initially followed by OSMP. Over time, however, UI was moved to its own static server, eliminating the need to trigger the entire OSMP build.
+
+Looking forward to your thoughts!
