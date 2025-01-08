@@ -1,55 +1,12 @@
-Problem Statement:
-In our current software development pipeline, we face significant delays and inefficiencies during the process of deploying and testing changes in our web application, specifically in the UI and backend components. The existing architecture follows a two-step process:
+1. Serverless API mocking library for Web Application
 
-UI Build Job: The first Jenkins job is responsible for running test cases, triggering the UI build, and generating a WAR file for the front-end application.
-Backend (BE) Build Job: After the UI WAR file is generated, a separate Jenkins job is triggered to build the backend (BE) application. The job takes the UI WAR file, deploys it to the BE webasset folder, and subsequently generates a JAR file for the backend, which is then deployed to the Tomcat server.
-While this process ensures that both the UI and BE components are built and deployed together, it introduces several challenges:
+2. Jenkin Job Optimization
+ a. Running test cases concurrently -  Instead of running all tests sequentially, we can use Jest's --maxWorkers option to parallelize the test execution in the same jenkins build.
 
-Long Build and Deployment Time: Both the UI and BE build processes are time-consuming, typically taking around 2 to 3 hours to complete. This delay is particularly problematic for developers who need to test changes in the UI, as they must wait for the entire pipeline (including backend build and deployment) to finish.
+ b. Node Modules Caching - We can use the "Pipeline Caching" or "workspace caching" to avoid reinstalling dependencies every time the build runs. This can be done by caching the node_modules directory between builds.
 
-Inefficient Resource Usage: The backend build is triggered even when only UI changes are made, leading to unnecessary rebuilding and redeployment of the backend, which wastes valuable resources and time.
+3. No-code BDD automation testing for UI and even for BE API's.
 
-Slow Feedback Loop: Developers who make changes to the UI often face a lengthy feedback loop since the UI changes cannot be tested until both the UI and BE builds are completed. This results in delays in validating and iterating on small, incremental changes.
+4. Automated Dependency Management Tool to streamline the process of managing package updates, resolving vulnerabilities, and ensuring compatibility
 
-Lack of Independence Between UI and BE Builds: The current architecture forces the UI and BE build processes to be tightly coupled, meaning that a change in the UI requires the entire backend to be rebuilt and redeployed, even if no changes were made to the backend code.
-
-Impact:
-Reduced Developer Productivity: Developers experience extended waiting times for their changes to be tested, hindering their ability to iterate quickly and affecting overall productivity.
-Slow Release Cycle: The lengthy process for testing UI changes prolongs the time it takes to release new features or fixes, ultimately slowing down the release cycle and affecting time-to-market.
-Inefficient Use of Build Resources: Running the BE build unnecessarily when only UI code changes are made leads to redundant processing and wasted resources.
-Challenges in Continuous Integration (CI): The dependency between the UI and BE builds limits the ability to implement efficient and fast continuous integration practices, which is critical for rapid development and deployment.
-Objective:
-To optimize the development, testing, and deployment pipeline by reducing the time required to test UI changes and decoupling the UI and BE builds, ensuring that only necessary components are rebuilt and redeployed. This will lead to faster feedback cycles, improved developer productivity, and more efficient use of build and deployment resources.
-
-
-Optimizing UI and BE Build Process
-
-Hi Team,
-
-We are facing a delay in our build and deployment process. Currently, when there is a change in UI, the backend (BE) build also gets triggered, leading to a total build time of 2-3 hours. This is causing long feedback cycles for developers working on small UI changes.
-
-Proposed Solution:
-
-Decouple UI and BE Jobs: Make the UI and BE builds independent of each other.
-Reuse Pre-Built Artifacts:
-When the UI job runs, it will fetch the pre-built BE JAR, merge it with the UI WAR, and deploy.
-When the BE job runs, it will fetch the pre-built UI WAR, merge it with the BE JAR, and deploy.
-This will reduce build time, improve efficiency, and allow developers to test UI changes quickly without waiting for BE rebuilds.
-
-Let me know if you have any questions.
-
-
-
-Key Discussion Points:
-Stories Readiness:
-
-The stories will be created and groomed in accordance with the shared development plan.
-Any deviations in story creation from this plan will directly affect the project deadlines. It is crucial to stick to the outlined plan for maintaining the schedule.
-Backend Team Support & Impact on UI Team:
-
-Due to limited or no support from the Backend team, the UI team will proceed with implementing the stories using mock data and API agreements until mid-February.
-This approach will require additional work in the future, as all features will need to be retested once the actual APIs are integrated.
-Testing Strategy:
-
-For test scenarios involving the same code logic, only a select few relevant test cases will be executed.
-This approach is adopted to optimize testing efforts, as the UI code for all test scenarios will remain the same.
+5. AI-Driven Refactoring Assistant for enhancing code quality, maintainability, and developer productivity.
