@@ -1,13 +1,370 @@
-Hi [Dare Team],
+import { createServer } from "miragejs";
 
-Thanks a lot for your response!
+const matchesRoute = (request, route) => {
+  const url = request?.url || "";
+  const method = request?.method || "";
+  const payload = request?.requestBody ? JSON.parse(request.requestBody) : null;
+  const uniqueIdentifier = null;
 
-To clarify, the points I shared were just a proposed solution. My primary intention was to explore potential ways to accelerate the UI build process and optimize the turnaround time for deploying UI changes.
+  // Parse the input URL to extract the path and query parameters
+  const [path, queryString] = url.split("?");
+  const queryParams = new URLSearchParams(queryString);
+  //const queryParams = new URLSearchParams(request?.queryParams) || {};
 
-Regarding your comment on the first proposal, I would like to understand a bit more about why it’s mandatory for the RTL teams to be aware of every UI release build. In my suggestion, we could design the wibtp-web Jenkins job to automatically search for the latest version of the WAR file from the artifact. If no artifact is found, the system could then trigger the UI build asynchronously. This approach would also apply to the UI job, where it would look for the BE JAR artifact before triggering the UI build. This should help streamline the process and reduce any dependency on manual communication.
+  // Ensure the base URL or relative URL match
+  const routePattern = new RegExp(
+    "^" + route.requestUrl.replace(/\*/g, ".*") + "$"
+  );
+  if (!routePattern.test(path)) {
+    return false;
+  }
 
-Again, the key goal here is to optimize the turnaround time for UI builds so that we can deploy UI changes faster.
+  // Match the unique identifier
+  if (route.uniqueIdentifier !== uniqueIdentifier) {
+    return false;
+  }
 
-Additionally, I wanted to mention that a similar mechanism was initially followed by OSMP. Over time, however, UI was moved to its own static server, eliminating the need to trigger the entire OSMP build.
+  // Match the request method
+  if (route.requestMethod !== method) {
+    return false;
+  }
 
-Looking forward to your thoughts!
+  // Match the query parameters if defined
+  if (route.requestURLQueryParameters) {
+    let allParamsMatch = true;
+    for (const key in route.requestURLQueryParameters) {
+      if (queryParams.get(key) !== route.requestURLQueryParameters[key]) {
+        allParamsMatch = false;
+        break;
+      }
+    }
+    if (!allParamsMatch) {
+      return false;
+    }
+  }
+
+  // Match the request payload
+  if (
+    route.requestPayload &&
+    JSON.stringify(route.requestPayload) !== JSON.stringify(payload)
+  ) {
+    return false;
+  }
+
+  // If all checks pass, return true
+  return true;
+};
+
+export function makeServer({ environment = "development" } = {}) {
+  let mockRoutes = [
+    {
+      requestUrl: "http://localhost:3001/api/simple-get",
+      requestMethod: "GET",
+      requestPayload: null,
+      requestURLQueryParameters: { sort: "asc" },
+      uniqueIdentifier: null,
+      responseStatusCode: 200,
+      response: {
+        users: [
+          { id: 1, name: "Alice" },
+          { id: 2, name: "Bob" },
+        ],
+      },
+    },
+    {
+      requestUrl: "*/api/user",
+      requestMethod: "POST",
+      requestPayload: { id: 1, name: "Alice" },
+      requestURLQueryParameters: null,
+      uniqueIdentifier: null,
+      responseStatusCode: 404,
+      response: {
+        error: "this is error",
+      },
+    },
+    {
+      requestUrl: "*/api/user/*/menu/*",
+      requestMethod: "GET",
+      requestPayload: null,
+      requestURLQueryParameters: null,
+      uniqueIdentifier: "neeraj",
+      responseStatusCode: 200,
+      response: [
+        {
+          name: "menu 1",
+        },
+        {
+          name: "menu 2",
+        },
+      ],
+    },
+  ];
+  let server = createServer({
+    environment,
+    routes() {
+      mockRoutes.forEach((route) => {
+        this[route?.requestMethod?.toLowerCase()](
+          route.url,
+          (schema, request) => {
+            if (matchesRoute(request, route)) {
+              return new Response(route.responseStatusCode, {}, route.response);
+            } else {
+              return new Response(
+                404,
+                {},
+                { error: "No matching mock route found" }
+              );
+            }
+          }
+        );
+      });
+
+      this.passthrough((request) => {
+        // Passthrough only if the request is not mocked
+        const isMocked = mockRoutes.some((route) =>
+          matchesRoute(request, route)
+        );
+        return !isMocked;
+      });
+    },
+  });
+
+  return server;
+}
+
+
+
+==============
+
+
+function matchRoute(
+  routes,
+  url,
+  method,
+  payload = null,
+  uniqueIdentifier = null
+) {
+  // Parse the input URL to extract the path and query parameters
+  const [path, queryString] = url.split("?");
+  const queryParams = new URLSearchParams(queryString);
+
+  for (const route of routes) {
+    // Ensure the base URL or relative URL match
+    const routePattern = new RegExp(
+      "^" + route.requestUrl.replace(/\*/g, ".*") + "$"
+    );
+    if (!routePattern.test(path)) {
+      continue;
+    }
+
+    // Match the unique identifier
+    if (route.uniqueIdentifier !== uniqueIdentifier) {
+      continue;
+    }
+
+    // Match the request method
+    if (route.requestMethod !== method) {
+      continue;
+    }
+
+    // Match the query parameters if defined
+    if (route.requestURLQueryParameters) {
+      let allParamsMatch = true;
+      for (const key in route.requestURLQueryParameters) {
+        if (queryParams.get(key) !== route.requestURLQueryParameters[key]) {
+          allParamsMatch = false;
+          break;
+        }
+      }
+      if (!allParamsMatch) {
+        continue;
+      }
+    }
+
+    // Match the request payload
+    if (
+      route.requestPayload &&
+      JSON.stringify(route.requestPayload) !== JSON.stringify(payload)
+    ) {
+      continue;
+    }
+
+    // If all checks pass, return true
+    return true;
+  }
+
+  // If no match is found, return false
+  return false;
+}
+
+let mockRoutes = [
+  {
+    requestUrl: "http://localhost:3001/api/simple-get",
+    requestMethod: "GET",
+    requestPayload: null,
+    requestURLQueryParameters: { sort: "asc" },
+    uniqueIdentifier: null,
+    responseStatusCode: 200,
+    response: {
+      users: [
+        { id: 1, name: "Alice" },
+        { id: 2, name: "Bob" },
+      ],
+    },
+  },
+  {
+    requestUrl: "*/api/user",
+    requestMethod: "POST",
+    requestPayload: { id: 1, name: "Alice" },
+    requestURLQueryParameters: null,
+    uniqueIdentifier: null,
+    responseStatusCode: 404,
+    response: {
+      error: "this is error",
+    },
+  },
+  {
+    requestUrl: "*/api/user/*/menu/*",
+    requestMethod: "GET",
+    requestPayload: null,
+    requestURLQueryParameters: null,
+    uniqueIdentifier: "neeraj",
+    responseStatusCode: 404,
+    response: [
+      {
+        name: "menu 1",
+      },
+      {
+        name: "menu 2",
+      },
+    ],
+  },
+];
+// Test cases
+console.log(
+  matchRoute(mockRoutes, "http://localhost:3001/api/simple-get", "POST")
+); // false
+console.log(
+  matchRoute(mockRoutes, "http://localhost:3001/api/simple-get", "GET")
+); // false
+console.log(
+  matchRoute(mockRoutes, "http://localhost:3001/api/simple-get?sort=asc", "GET")
+); // true
+console.log(
+  matchRoute(
+    mockRoutes,
+    "http://localhost:3001/api/simple-get?sort=asc&page=2",
+    "GET"
+  )
+); // true
+console.log(
+  matchRoute(
+    mockRoutes,
+    "http://localhost:3001/api/simple-get?sort=desc&page=2",
+    "GET"
+  )
+); // false
+console.log(
+  matchRoute(mockRoutes, "http://localhost:3002/api/simple-get?sort=asc", "GET")
+); // false
+
+console.log("-------");
+console.log(matchRoute(mockRoutes, "http://localhost:3001/api/user", "GET")); // false
+console.log(matchRoute(mockRoutes, "http://localhost:3001/api/user", "POST")); // false
+console.log(
+  matchRoute(mockRoutes, "http://localhost:3001/api/user", "POST", {
+    id: 1,
+    name: "Alice",
+  })
+); // true
+console.log(
+  matchRoute(mockRoutes, "http://localhost:3001/api/user?sort=asc", "POST", {
+    id: 1,
+    name: "Alice",
+  })
+); // true
+console.log(
+  matchRoute(mockRoutes, "http://localhost:3002/api/user?sort=asc", "POST", {
+    id: 1,
+    name: "Alice",
+  })
+); // true
+console.log(
+  matchRoute(mockRoutes, "http://localhost:3003/api/user?page=desc", "POST", {
+    id: 1,
+    name: "Alice",
+  })
+); // true
+console.log("-------");
+console.log(
+  matchRoute(
+    mockRoutes,
+    "http://localhost:3001/api/user/1/menu/1",
+    "GET",
+    null,
+    "neeraj"
+  )
+); // true
+console.log(
+  matchRoute(
+    mockRoutes,
+    "http://localhost:3001/api/user/2/menu/2?sort=asc",
+    "GET"
+  )
+); // false
+console.log(
+  matchRoute(mockRoutes, "http://localhost:3001/api/user/3/menu/3", "POST")
+); // false
+console.log(
+  matchRoute(mockRoutes, "http://localhost:3002/api/user/1/menu/1", "GET", {
+    id: 1,
+    name: "Alice",
+  })
+); // false
+console.log(
+  matchRoute(
+    mockRoutes,
+    "http://localhost:3002/api/user/2/menu/2?sort=asc",
+    "GET",
+    { id: 1, name: "Alice" },
+    "neeraj"
+  )
+); // true
+console.log(
+  matchRoute(mockRoutes, "http://localhost:3002/api/user/3/menu/3", "POST", {
+    id: 1,
+    name: "Alice",
+  })
+); // false
+
+
+
+======================
+
+function matchesRoute(request, route) {
+  const { url, method, requestPayload, requestURLQueryParameters } = route;
+  // Check if the URL and method match
+  if (request.url !== url || request.method !== method) {
+    return false;
+  }
+
+  // Check query parameters
+  if (requestURLQueryParameters) {
+    const queryParams = new URLSearchParams(request.queryParams);
+    const queryMatches = Object.entries(requestURLQueryParameters).every(
+      ([key, value]) => queryParams.get(key) === value
+    );
+    if (!queryMatches) return false;
+  }
+
+  // Check request payload
+  if (requestPayload && request.requestBody) {
+    const requestBody = JSON.parse(request.requestBody);
+    const payloadMatches = Object.entries(requestPayload).every(
+      ([key, value]) => requestBody[key] === value
+    );
+    if (!payloadMatches) return false;
+  }
+
+  return true;
+}
