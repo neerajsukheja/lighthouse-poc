@@ -1,17 +1,20 @@
-const express = require('express');
-const app = express();
-const port = 3002;
+Sprint Status Note:
 
-// Define a GET endpoint
-app.get('/api/data', (req, res) => {
-  const data = {
-    message: 'Hello, this is your data!',
-    timestamp: new Date(),
-  };
-  res.json(data);
-});
+    In Sprint 25.01, due to the unavailability of backlog stories, UI developers could only take on 18 story points, instead of the usual 60. This concern was communicated to the PO before the sprint started on 12/26 (refer to the screenshot below).
 
-// Start the server
-app.listen(port, () => {
-  console.log(`Server is running on http://localhost:${port}`);
-});
+    Typically, we handle feature stories end-to-end, including BE API implementation. However, due to limited availability from the BE team, we could only work on the UI portion. This means the features will need to be revisited for API integration (e.g., Stories GFQN-8131, GFQN-8114, GFQN-8219).
+
+    Features are being refined too close to the sprint, leaving developers insufficient time to properly brainstorm. Ideally, refinement should happen at least two sprints in advance.
+
+    The development plan is not aligning with story and XD design completion dates. For example:
+        DDA flow stories should have been completed by 12/17, but additional stories are still pending.
+        The XD team was supposed to finish Card designs by 12/31, but they are still in progress.
+
+Delays in story refinement and design impact our development timeline.
+
+
+Very few stories have been refined for the next sprint, which was highlighted as a concern during the Backlog refinement call.
+
+There are very few development stories available. Most of the stories in this sprint are test-only, where developers are tasked with validating different UI scenarios and data derived from the BE. For example, in the Account Summary view selection, testing is required to see how the From and To account options vary. Since BDD cannot be written for these scenarios as the options are dynamically fetched from the BE, manual testing has been requested.
+
+We are unable to proceed with certain stories because the required XAPI for the functionalities has not been created. As a result, even the mock data is not ready, preventing us from mocking and testing these features on our local systems.
