@@ -1,20 +1,285 @@
-Sprint Status Note:
+const express = require("express");
+const fs = require("fs");
+const cors = require("cors");
+const path = require("path");
 
-    In Sprint 25.01, due to the unavailability of backlog stories, UI developers could only take on 18 story points, instead of the usual 60. This concern was communicated to the PO before the sprint started on 12/26 (refer to the screenshot below).
+const app = express();
+app.use(express.json());
+app.use(cors());
 
-    Typically, we handle feature stories end-to-end, including BE API implementation. However, due to limited availability from the BE team, we could only work on the UI portion. This means the features will need to be revisited for API integration (e.g., Stories GFQN-8131, GFQN-8114, GFQN-8219).
+const mockDataFilePath = path.join(__dirname, "mockdata", "mockdata.json");
 
-    Features are being refined too close to the sprint, leaving developers insufficient time to properly brainstorm. Ideally, refinement should happen at least two sprints in advance.
+// Helper Functions
 
-    The development plan is not aligning with story and XD design completion dates. For example:
-        DDA flow stories should have been completed by 12/17, but additional stories are still pending.
-        The XD team was supposed to finish Card designs by 12/31, but they are still in progress.
+// Read mock data from file
+function readMockData() {
+  if (!fs.existsSync(mockDataFilePath)) {
+    fs.writeFileSync(mockDataFilePath, JSON.stringify([]));
+    return [];
+  }
+  return JSON.parse(fs.readFileSync(mockDataFilePath));
+}
 
-Delays in story refinement and design impact our development timeline.
+// Write mock data to file
+function writeMockData(data) {
+  fs.writeFileSync(mockDataFilePath, JSON.stringify(data, null, 2));
+}
 
+// Check if the object is a valid object with key-value pairs
+function isValidObject(obj) {
+  return (
+    obj && typeof obj === "object" && Object.keys(obj).some((key) => obj[key])
+  );
+}
 
-Very few stories have been refined for the next sprint, which was highlighted as a concern during the Backlog refinement call.
+// Validate URL pattern (wildcards allowed)
+function isValidUrl(string) {
+  try {
+    new URL(string);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
-There are very few development stories available. Most of the stories in this sprint are test-only, where developers are tasked with validating different UI scenarios and data derived from the BE. For example, in the Account Summary view selection, testing is required to see how the From and To account options vary. Since BDD cannot be written for these scenarios as the options are dynamically fetched from the BE, manual testing has been requested.
+// Convert wildcard pattern to a valid URL
+function convertToUrl(pattern) {
+  if (/^\*+/i.test(pattern)) {
+    return pattern.replace(/^\*+/i, "http://example.com");
+  }
+  return pattern;
+}
 
-We are unable to proceed with certain stories because the required XAPI for the functionalities has not been created. As a result, even the mock data is not ready, preventing us from mocking and testing these features on our local systems.
+// Validate the request body
+function validateRequestBody(body) {
+  const errors = [];
+
+  // Validate requestUrl
+  if (!body.requestUrl) {
+    errors.push("Request URL is a mandatory field.");
+  } else if (!isValidUrl(body.requestUrl)) {
+    errors.push(
+      "Request URL should be a valid URL or contain wildcards (*). Add * in the beginning if no base URL added."
+    );
+  } else if (body.requestUrl.includes("?")) {
+    errors.push(
+      "Request URL should not contain URL parameters (e.g., ?param=value)."
+    );
+  }
+
+  // Validate requestMethod
+  const allowedMethods = ["GET", "POST", "PATCH", "PUT", "DELETE"];
+  if (
+    !body.requestMethod ||
+    !allowedMethods.includes(body.requestMethod.toUpperCase())
+  ) {
+    errors.push(
+      "Request Method is a mandatory field and should be one of the following: GET, POST, PATCH, PUT, DELETE."
+    );
+  }
+
+  // Validate responseStatusCode
+  if (!(body.responseStatusCode >= 100 && body.responseStatusCode <= 599)) {
+    errors.push("Response Status Code should be a valid HTTP status code.");
+  }
+
+  if (!body.response) {
+    errors.push("Response is a mandatory field.");
+  }
+
+  // Validate responseHeaders
+  if (body.responseHeaders && !isValidObject(body.responseHeaders)) {
+    errors.push(
+      "Response Headers should be a valid object of key-value pairs."
+    );
+  }
+
+  // Validate parameterizedRequestScenarios
+  if (body.parameterizedRequestScenarios) {
+    body.parameterizedRequestScenarios.forEach((scenario, index) => {
+      const scenarioErrors = validateScenario(scenario, index + 1);
+      errors.push(...scenarioErrors);
+    });
+  }
+
+  return errors.length ? errors : null;
+}
+
+// Validate scenarios inside parameterizedRequestScenarios
+function validateScenario(scenario, scenarioIndex) {
+  const errors = [];
+
+  if (
+    !(scenario.responseStatusCode >= 100 && scenario.responseStatusCode <= 599)
+  ) {
+    errors.push(
+      `Scenario #${scenarioIndex}: Response Status Code should be a valid HTTP status code.`
+    );
+  }
+  if (!scenario.response)
+    errors.push(`Scenario #${scenarioIndex}: Response is a mandatory field.`);
+
+  if (scenario.responseHeaders && !isValidObject(scenario.responseHeaders)) {
+    errors.push(
+      `Scenario #${scenarioIndex}: Response Headers should be a valid object of key-value pairs.`
+    );
+  }
+
+  if (!Array.isArray(scenario.scenarios) || !scenario.scenarios.length) {
+    errors.push(
+      `Scenario #${scenarioIndex}: should have valid scenario conditions.`
+    );
+  } else {
+    scenario.scenarios.forEach((subScenario, subScenarioIndex) => {
+      const subScenarioErrors = validateSubScenario(
+        subScenario,
+        scenarioIndex,
+        subScenarioIndex + 1
+      );
+      errors.push(...subScenarioErrors);
+    });
+  }
+
+  return errors;
+}
+
+// Validate sub-scenario details
+function validateSubScenario(subScenario, scenarioIndex, subScenarioIndex) {
+  const errors = [];
+
+  if (!isValidObject(subScenario)) {
+    errors.push(
+      `Scenario #${scenarioIndex}, Sub-scenario #${subScenarioIndex}: Should contain a valid scenario.`
+    );
+  }
+
+  if (
+    subScenario.uniqueIdentifier &&
+    !["number", "boolean", "string"].includes(
+      typeof subScenario.uniqueIdentifier
+    )
+  ) {
+    errors.push(
+      `Scenario #${scenarioIndex}, Sub-scenario #${subScenarioIndex}: 'Unique Identifier' should have a valid value.`
+    );
+  }
+
+  if (
+    subScenario.requestPayload &&
+    !isValidObject(subScenario.requestPayload)
+  ) {
+    errors.push(
+      `Scenario #${scenarioIndex}, Sub-scenario #${subScenarioIndex}: 'Request Payload' should be a valid object of key-value pairs.`
+    );
+  }
+
+  if (
+    subScenario.requestURLQueryParameters &&
+    !isValidObject(subScenario.requestURLQueryParameters)
+  ) {
+    errors.push(
+      `Scenario #${scenarioIndex}, Sub-scenario #${subScenarioIndex}: 'Request Query Parameter' should be a valid object of key-value pairs.`
+    );
+  }
+
+  return errors;
+}
+
+// Main Routes
+
+let mockData = readMockData();
+
+// Create a new mock object with auto-increment id
+app.post("/api/mock-data-interceptor", (req, res) => {
+  const errors = validateRequestBody(req.body);
+  if (errors) return res.status(400).json({ errors });
+
+  // Check for duplicate requestUrl and requestMethod combination
+  const existingMock = mockData.find(
+    (item) =>
+      item.requestUrl === req.body.requestUrl &&
+      item.requestMethod === req.body.requestMethod
+  );
+
+  if (existingMock) {
+    return res.status(400).json({
+      error: "Duplicate Request URL and Request Method combination detected.",
+    });
+  }
+
+  // Generate auto-increment id
+  const newId =
+    mockData.length > 0 ? Math.max(...mockData.map((item) => item.id)) + 1 : 1;
+  const newMockData = { ...req.body, id: newId };
+
+  mockData.push(newMockData);
+  writeMockData(mockData);
+
+  res.json({ message: "Mock data created successfully.", data: newMockData });
+});
+
+// Read all mock objects
+app.get("/api/mock-data-interceptor", (req, res) => {
+  res.json(mockData);
+});
+
+// Read a specific mock object
+app.get("/api/mock-data-interceptor/:id", (req, res) => {
+  const mock = mockData.find((item) => item.id === parseInt(req.params.id));
+  if (!mock) {
+    return res.status(404).json({ error: "Mock data not found." });
+  }
+  res.json(mock);
+});
+
+// Update a specific mock object
+app.put("/api/mock-data-interceptor/:id", (req, res) => {
+  const id = parseInt(req.params.id);
+  const existingMockIndex = mockData.findIndex((item) => item.id === id);
+
+  if (existingMockIndex === -1) {
+    return res.status(404).json({ error: "Mock data not found." });
+  }
+
+  const errors = validateRequestBody(req.body);
+  if (errors) return res.status(400).json({ errors });
+
+  // Check for duplicate requestUrl and requestMethod combination (excluding the current item)
+  const existingMock = mockData.find(
+    (item) =>
+      item.id !== id &&
+      item.requestUrl === req.body.requestUrl &&
+      item.requestMethod === req.body.requestMethod
+  );
+
+  if (existingMock) {
+    return res.status(400).json({
+      error: "Duplicate Request URL and Request Method combination detected.",
+    });
+  }
+
+  mockData[existingMockIndex] = { ...req.body, id };
+  writeMockData(mockData);
+
+  res.json({ message: "Mock data updated successfully.", data: req.body });
+});
+
+// Delete a specific mock object
+app.delete("/api/mock-data-interceptor/:id", (req, res) => {
+  const id = parseInt(req.params.id);
+  const existingMockIndex = mockData.findIndex((item) => item.id === id);
+  if (existingMockIndex === -1) {
+    return res.status(404).json({ error: "Mock data not found." });
+  }
+
+  mockData = mockData.filter((item) => item.id !== id);
+  writeMockData(mockData);
+
+  res.json({ message: "Mock data deleted successfully." });
+});
+
+// Start the server
+const PORT = 3001;
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+});
