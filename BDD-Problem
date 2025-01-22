@@ -1,222 +1,305 @@
-import { createServer } from "miragejs";
-import { Response } from "miragejs";
+const express = require("express");
+const fs = require("fs");
+const cors = require("cors");
+const path = require("path");
+const app = express();
+app.use(express.json());
+app.use(cors());
 
-async function fetchMockRoutes() {
-  try {
-    const response = await fetch("http://localhost:3001/api/mock-routes");
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+const mockDataFilePath = path.join(__dirname, "mockdata", "mockdata.json");
+
+function isValidObject(obj) {
+  // Check if the object is not null or undefined and is an object
+  if (obj && typeof obj === "object") {
+    // Iterate over all properties of the object
+    for (let key in obj) {
+      // Check if the property has a non-falsy value
+      if (obj.hasOwnProperty(key) && obj[key]) {
+        return true; // Found a valid property with a value
+      }
     }
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error("Failed to fetch mock routes:", error.message);
-    return [];
+  }
+  return false; // No valid properties found or object is invalid
+}
+function isValidUrl(string) {
+  try {
+    const properURL = convertToUrl(string);
+    new URL(properURL);
+    return true;
+  } catch (err) {
+    return false;
   }
 }
 
-// Helper function to match URL with wildcard support
-function isUrlMatched(request, mockRoutes) {
-  const url = request?.url || "";
-  const method = request?.method || "";
-  const path = url.split("?")[0];
-  return mockRoutes.some(({ requestUrl, requestMethod }) => {
-    if (method !== requestMethod) return false;
-    const regexPattern = requestUrl.replace(/\*/g, ".*").replace(/\?/g, "\\?");
-    return new RegExp("^" + regexPattern + "$").test(path);
-  });
+function convertToUrl(pattern) {
+  // Check if the pattern starts with a wildcard (*/ or **/)
+  if (/^\*+/i.test(pattern)) {
+    // Remove any leading wildcards (*/ or **/) and convert it to a valid URL
+    pattern = pattern.replace(/^\*+/i, "http://example.com");
+  }
+  return pattern;
 }
 
-// Helper function to check if all conditions in a scenario are met
-function isScenarioMatch(request, scenario) {
-  const { queryParams, requestBody } = request;
-  const urlParams = new URLSearchParams(queryParams);
+// Helper to validate required fields
+function validateRequestBody(body) {
+  const errors = [];
 
-  const queryParamMatch = scenario.requestURLQueryParameters
-    ? Object.entries(scenario.requestURLQueryParameters).every(
-        ([key, value]) => urlParams.get(key) === value.toString()
-      )
-    : true;
+  // Validate the top-level fields
+  if (!body.requestUrl) {
+    errors.push("Request URL is a mandatory field.");
+  } else {
+    if (!isValidUrl(body.requestUrl)) {
+      errors.push(
+        "Request URL should be a valid URL or contain wildcards (*). Add * in beginning if no base URL added. "
+      );
+    }
 
-  const payloadMatch = scenario.requestPayload
-    ? (() => {
-        try {
-          const parsedRequestBody = JSON.parse(requestBody);
-          return Object.entries(scenario.requestPayload).every(
-            ([key, value]) => parsedRequestBody[key] === value
+    // Check if the URL contains query parameters (should not have '?')
+    if (body.requestUrl.includes("?")) {
+      errors.push(
+        "Request URL should not contain URL parameters (e.g., ?param=value)."
+      );
+    }
+  }
+
+  // Validate requestMethod: it should be one of GET, POST, PATCH, PUT, DELETE
+  if (!body.requestMethod) {
+    errors.push("Request Method is a mandatory field.");
+  } else {
+    const allowedMethods = ["GET", "POST", "PATCH", "PUT", "DELETE"];
+    if (!allowedMethods.includes(body.requestMethod.toUpperCase())) {
+      errors.push(
+        "Request Method should be one of the following: GET, POST, PATCH, PUT, DELETE."
+      );
+    }
+  }
+
+  if (
+    !(
+      body.responseStatusCode !== undefined &&
+      Number.isInteger(body.responseStatusCode) &&
+      body.responseStatusCode >= 100 &&
+      body.responseStatusCode <= 599
+    )
+  ) {
+    errors.push("Response Status Code should be a valid HTTP status code.");
+  }
+
+  if (!body.response) {
+    errors.push("Response is a mandatory field.");
+  }
+
+  if (body.responseHeaders && !isValidObject(body.responseHeaders)) {
+    errors.push("Response Headers should be a valid object of key value pair.");
+  }
+
+  // Validate parameterizedRequestScenarios if present
+  if (body.parameterizedRequestScenarios) {
+    if (
+      body.parameterizedRequestScenarios !== undefined && // Ensure it's not undefined
+      !Array.isArray(body.parameterizedRequestScenarios) // Ensure it's an array
+    ) {
+      errors.push("Parameterized Request Scenarios should be an array.");
+    } else if (
+      body.parameterizedRequestScenarios &&
+      body.parameterizedRequestScenarios.length === 0
+    ) {
+      errors.push("Parameterized Request Scenarios cannot be an empty array.");
+    } else {
+      body.parameterizedRequestScenarios.forEach((scenario, index) => {
+        const scenarioErrors = [];
+        if (
+          !(
+            scenario.responseStatusCode !== undefined &&
+            Number.isInteger(scenario.responseStatusCode) &&
+            scenario.responseStatusCode >= 100 &&
+            scenario.responseStatusCode <= 599
+          )
+        ) {
+          scenarioErrors.push(
+            `Scenario #${
+              index + 1
+            }: Response Status Code should be a valid HTTP status code.`
           );
-        } catch {
-          return false;
         }
-      })()
-    : true;
 
-  const uniqueIdentifier = "data";
-  const uniqueIdentifierMatch = scenario.uniqueIdentifier
-    ? uniqueIdentifier === scenario.uniqueIdentifier
-    : true;
+        if (!scenario.response) {
+          scenarioErrors.push(
+            `Scenario #${index + 1}: Response is a mandatory field.`
+          );
+        }
 
-  return queryParamMatch && payloadMatch && uniqueIdentifierMatch;
-}
+        if (
+          scenario.responseHeaders &&
+          !isValidObject(scenario.responseHeaders)
+        ) {
+          scenarioErrors.push(
+            `Scenario #${
+              index + 1
+            }: Response Headers should be a valid object of key value pair.`
+          );
+        }
 
-// Helper function to find the matching scenario for a route
-function findMatchingScenario(route, request) {
-  return route.parameterizedRequestScenarios.find((scenario) => {
-    return scenario.scenarios.every((cond) => isScenarioMatch(request, cond));
-  });
-}
+        if (
+          !scenario.scenarios ||
+          !Array.isArray(scenario.scenarios) ||
+          !scenario.scenarios.length
+        ) {
+          scenarioErrors.push(
+            `Scenario #${index + 1}: should have valid scenario conditions.`
+          );
+        } else {
+          scenario.scenarios.forEach((scenarioObj, objIndex) => {
+            if (!isValidObject(scenarioObj)) {
+              scenarioErrors.push(
+                `Scenario #${index + 1}, Sub-scenario #${
+                  objIndex + 1
+                }: Should contain any validation scenario.`
+              );
+            }
 
-export async function makeServer({ environment = "development" } = {}) {
-  // Fetch the mock routes from an external API
-  const mockRoutes = await fetchMockRoutes();
+            if (
+              scenarioObj.uniqueIdentifier &&
+              !(
+                typeof scenarioObj.uniqueIdentifier === "number" ||
+                typeof scenarioObj.uniqueIdentifier === "boolean" ||
+                typeof scenarioObj.uniqueIdentifier === "string"
+              )
+            ) {
+              scenarioErrors.push(
+                `Scenario #${index + 1}, Sub-scenario #${
+                  objIndex + 1
+                }: 'Unique Identifier should have a valid value.`
+              );
+            }
 
-  let server = createServer({
-    environment,
-    routes() {
-      mockRoutes.forEach((route) => {
-        this[route.requestMethod.toLowerCase()](
-          route.requestUrl,
-          (schema, request) => {
-            const matchingScenario = findMatchingScenario(route, request);
+            if (
+              scenarioObj.requestPayload &&
+              !isValidObject(scenarioObj.requestPayload)
+            ) {
+              scenarioErrors.push(
+                `Scenario #${index + 1}, Sub-scenario #${
+                  objIndex + 1
+                }: 'Request Payload should be a valid object of key value pair.`
+              );
+            }
 
-            // If a matching scenario is found, use its response
-            const responseToReturn = matchingScenario
-              ? matchingScenario.response
-              : route.response;
+            if (
+              scenarioObj.requestURLQueryParameters &&
+              !isValidObject(scenarioObj.requestURLQueryParameters)
+            ) {
+              scenarioErrors.push(
+                `Scenario #${index + 1}, Sub-scenario #${
+                  objIndex + 1
+                }: 'Request Query Parameter should be a valid object of key value pair.`
+              );
+            }
+          });
+        }
 
-            return new Response(
-              matchingScenario?.responseStatusCode || route.responseStatusCode,
-              matchingScenario?.responseHeaders || route.responseHeaders || {},
-              JSON.stringify(responseToReturn)
-            );
-          }
-        );
+        // If any errors were found for this parameterizedRequestScenario, add them with the index
+        if (scenarioErrors.length > 0) {
+          errors.push(...scenarioErrors);
+        }
       });
+    }
 
-      this.passthrough((request) => {
-        // Passthrough only if the request is not mocked
-        return !isUrlMatched(request, mockRoutes);
-      });
-    },
-  });
-
-  return server;
+    return errors.length > 0 ? errors : null;
+  }
 }
 
+// Read mock data from file
+const readMockData = () => {
+  if (!fs.existsSync(mockDataFilePath)) {
+    fs.writeFileSync(mockDataFilePath, JSON.stringify([]));
+    return [];
+  }
+  try {
+    return JSON.parse(fs.readFileSync(mockDataFilePath));
+  } catch (error) {
+    console.error("Error reading mock data file:", error.message);
+    return [];
+  }
+};
 
+// Write mock data to file
+function writeMockData(data) {
+  fs.writeFileSync(mockDataFilePath, JSON.stringify(data, null, 2));
+}
 
-[
-    {
-      requestUrl: "http://localhost:3001/api/simple-get",
-      requestMethod: "GET",
-      parameterizedRequestScenarios: [
-        {
-          responseStatusCode: 200,
-          response: { message: "ASC Data" },
-          responseHeaders: {
-            neeraj: "123",
-          },
-          scenarios: [{ requestURLQueryParameters: { sort: "asc" } }],
-        },
-        {
-          responseStatusCode: 200,
-          response: { message: "DESC Data" },
-          scenarios: [{ requestURLQueryParameters: { sort: "desc" } }],
-        },
-        {
-          responseStatusCode: 200,
-          response: { message: "Data with Unique Identifier Data" },
-          scenarios: [{ uniqueIdentifier: "data" }],
-        },
-        {
-          responseStatusCode: 200,
-          response: {
-            message:
-              "Data with Unique Identifier Data and requestURLQueryParameters",
-          },
+let mockData = readMockData();
+app.post("/api/mock-data-interceptor", (req, res) => {
+  const errors = validateRequestBody(req.body);
+  if (errors) return res.status(400).json({ errors });
 
-          scenarios: [
-            {
-              uniqueIdentifier: "data",
-              requestURLQueryParameters: { sort: "desc", age: 30 },
-            },
-          ],
-        },
-      ],
-      responseHeaders: {
-        neeraj: "test",
-      },
-      responseStatusCode: 200,
-      response: { message: "GET Response" },
-    },
-    {
-      requestUrl: "*/api/users/*/id",
-      requestMethod: "GET",
-      parameterizedRequestScenarios: [
-        {
-          responseStatusCode: 200,
-          response: { message: "USERS ASC Data" },
-          scenarios: [{ requestURLQueryParameters: { sort: "asc" } }],
-        },
-        {
-          responseStatusCode: 200,
-          response: { message: "USERS DESC Data" },
-          scenarios: [{ requestURLQueryParameters: { sort: "desc" } }],
-        },
-        {
-          responseStatusCode: 200,
-          response: { message: "USERS Data with Unique Identifier Data" },
-          scenarios: [{ uniqueIdentifier: "data" }],
-        },
-        {
-          responseStatusCode: 200,
-          response: { message: "USERS Data with Unique Identifier Data" },
-          scenarios: [
-            {
-              uniqueIdentifier: "data",
-              requestURLQueryParameters: { sort: "desc", age: 30 },
-            },
-          ],
-        },
-      ],
-      responseStatusCode: 200,
-      response: { message: "USERS GET Response" },
-    },
-    {
-      requestUrl: "http://localhost:3001/api/simple-get",
-      requestMethod: "POST",
-      parameterizedRequestScenarios: [
-        {
-          responseStatusCode: 200,
-          response: { message: "Request Payload name username." },
-          scenarios: [{ requestPayload: { id: 44, name: "userName" } }],
-        },
-        {
-          responseStatusCode: 200,
-          response: { message: "DESC Data" },
-          scenarios: [{ requestPayload: { id: 32, age: 30 } }],
-        },
-        {
-          responseStatusCode: 404,
-          response: { message: "This is error with unique identifier" },
-          scenarios: [{ uniqueIdentifier: "data" }],
-        },
-        {
-          responseStatusCode: 200,
-          response: {
-            message:
-              "Data with Unique Identifier and request payload and request url parameter",
-          },
-          scenarios: [
-            {
-              uniqueIdentifier: "secondData",
-              requestPayload: { id: 38, age: 50 },
-              requestURLQueryParameters: { sort: "desc", age: 30 },
-            },
-          ],
-        },
-      ],
-      responseStatusCode: 200,
-      response: { message: "POST Response" },
-    },
-  ]
+  const duplicate = mockData.find(
+    (item) =>
+      item.requestUrl === req.body.requestUrl &&
+      item.requestMethod === req.body.requestMethod
+  );
+  if (duplicate)
+    return res
+      .status(400)
+      .json({ error: "Duplicate Request URL and Method combination." });
+
+  const newId =
+    mockData.length > 0 ? Math.max(...mockData.map((item) => item.id)) + 1 : 1;
+  const newMockData = { ...req.body, id: newId };
+  mockData.push(newMockData);
+  writeMockData(mockData);
+  res.json({ message: "Mock data created successfully.", data: newMockData });
+});
+
+app.get("/api/mock-data-interceptor", (req, res) => res.json(mockData));
+
+app.get("/api/mock-data-interceptor/:id", (req, res) => {
+  const mock = mockData.find((item) => item.id === parseInt(req.params.id));
+  if (!mock) return res.status(404).json({ error: "Mock data not found." });
+  res.json(mock);
+});
+
+app.put("/api/mock-data-interceptor/:id", (req, res) => {
+  const id = parseInt(req.params.id);
+  const index = mockData.findIndex((item) => item.id === id);
+  if (index === -1)
+    return res.status(404).json({ error: "Mock data not found." });
+
+  const errors = validateRequestBody(req.body);
+  if (errors) return res.status(400).json({ errors });
+
+  const duplicate = mockData.find(
+    (item) =>
+      item.id !== id &&
+      item.requestUrl === req.body.requestUrl &&
+      item.requestMethod === req.body.requestMethod
+  );
+  if (duplicate)
+    return res
+      .status(400)
+      .json({ error: "Duplicate Request URL and Method combination." });
+
+  mockData[index] = { ...req.body, id };
+  writeMockData(mockData);
+  res.json({ message: "Mock data updated successfully.", data: req.body });
+});
+
+app.delete("/api/mock-data-interceptor/:id", (req, res) => {
+  const id = parseInt(req.params.id);
+  const index = mockData.findIndex((item) => item.id === id);
+  if (index === -1)
+    return res.status(404).json({ error: "Mock data not found." });
+
+  mockData.splice(index, 1);
+  writeMockData(mockData);
+  res.json({ message: "Mock data deleted successfully." });
+});
+
+// Start the server
+const PORT = 3001;
+app.listen(PORT, (err) => {
+  if (err) {
+    console.error(`Failed to start server: ${err.message}`);
+    process.exit(1);
+  }
+  console.log(`Server running on http://localhost:${PORT}`);
+});
