@@ -1,285 +1,258 @@
-const express = require("express");
-const fs = require("fs");
-const cors = require("cors");
-const path = require("path");
+import React, { useState } from "react";
+import {
+  Container,
+  TextField,
+  Button,
+  Typography,
+  Grid,
+  Paper,
+  IconButton,
+} from "@material-ui/core";
+import { useForm, useFieldArray, Controller } from "react-hook-form";
+import { Add, Remove } from "@material-ui/icons";
 
-const app = express();
-app.use(express.json());
-app.use(cors());
+const MockDataForm = () => {
+  const {
+    control,
+    register,
+    handleSubmit,
+    reset,
+    setValue,
+    getValues,
+    watch,
+  } = useForm({
+    defaultValues: {
+      requestUrl: "",
+      requestMethod: "",
+      responseStatusCode: "",
+      response: "",
+      responseHeaders: [{}],
+      parameterizedRequestScenarios: [],
+    },
+  });
 
-const mockDataFilePath = path.join(__dirname, "mockdata", "mockdata.json");
+  const { fields: scenarios, append, remove } = useFieldArray({
+    control,
+    name: "parameterizedRequestScenarios",
+  });
 
-// Helper Functions
+  const addScenario = () => {
+    append({
+      responseStatusCode: "",
+      response: "",
+      responseHeaders: [{}],
+      scenarios: [],
+    });
+  };
 
-// Read mock data from file
-function readMockData() {
-  if (!fs.existsSync(mockDataFilePath)) {
-    fs.writeFileSync(mockDataFilePath, JSON.stringify([]));
-    return [];
-  }
-  return JSON.parse(fs.readFileSync(mockDataFilePath));
-}
+  const addSubScenario = (scenarioIndex) => {
+    const existingScenarios = getValues(
+      `parameterizedRequestScenarios[${scenarioIndex}].scenarios`
+    );
+    setValue(
+      `parameterizedRequestScenarios[${scenarioIndex}].scenarios`,
+      [
+        ...(existingScenarios || []),
+        {
+          uniqueIdentifier: "",
+          requestURLQueryParameters: [{}],
+          requestPayload: [{}],
+        },
+      ]
+    );
+  };
 
-// Write mock data to file
-function writeMockData(data) {
-  fs.writeFileSync(mockDataFilePath, JSON.stringify(data, null, 2));
-}
+  const onSubmit = (data) => {
+    console.log("Form Data:", data);
+    // Perform API call to save data
+  };
 
-// Check if the object is a valid object with key-value pairs
-function isValidObject(obj) {
   return (
-    obj && typeof obj === "object" && Object.keys(obj).some((key) => obj[key])
+    <Container maxWidth="md">
+      <Typography variant="h4" gutterBottom>
+        Add Mock Data
+      </Typography>
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <Paper style={{ padding: 16, marginBottom: 16 }}>
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
+              <TextField
+                label="Request URL"
+                name="requestUrl"
+                fullWidth
+                variant="outlined"
+                inputRef={register({ required: "Request URL is mandatory" })}
+              />
+            </Grid>
+            <Grid item xs={6}>
+              <TextField
+                label="Request Method"
+                name="requestMethod"
+                fullWidth
+                variant="outlined"
+                select
+                SelectProps={{ native: true }}
+                inputRef={register({ required: "Request Method is mandatory" })}
+              >
+                <option value="">Select Method</option>
+                <option value="GET">GET</option>
+                <option value="POST">POST</option>
+                <option value="PUT">PUT</option>
+                <option value="PATCH">PATCH</option>
+                <option value="DELETE">DELETE</option>
+              </TextField>
+            </Grid>
+            <Grid item xs={6}>
+              <TextField
+                label="Response Status Code"
+                name="responseStatusCode"
+                fullWidth
+                variant="outlined"
+                type="number"
+                inputRef={register({ required: "Response Code is mandatory" })}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                label="Response"
+                name="response"
+                fullWidth
+                variant="outlined"
+                multiline
+                rows={4}
+                inputRef={register({ required: "Response is mandatory" })}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                label="Response Headers (Optional)"
+                name="responseHeaders"
+                fullWidth
+                variant="outlined"
+                multiline
+                rows={2}
+                inputRef={register}
+              />
+            </Grid>
+          </Grid>
+        </Paper>
+
+        <Typography variant="h6" gutterBottom>
+          Parameterized Request Scenarios
+        </Typography>
+        {scenarios.map((scenario, index) => (
+          <Paper key={scenario.id} style={{ padding: 16, marginBottom: 16 }}>
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <TextField
+                  label={`Scenario #${index + 1} Response Code`}
+                  name={`parameterizedRequestScenarios[${index}].responseStatusCode`}
+                  fullWidth
+                  variant="outlined"
+                  type="number"
+                  inputRef={register({ required: true })}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  label={`Scenario #${index + 1} Response`}
+                  name={`parameterizedRequestScenarios[${index}].response`}
+                  fullWidth
+                  variant="outlined"
+                  multiline
+                  rows={4}
+                  inputRef={register({ required: true })}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  label={`Scenario #${index + 1} Response Headers (Optional)`}
+                  name={`parameterizedRequestScenarios[${index}].responseHeaders`}
+                  fullWidth
+                  variant="outlined"
+                  multiline
+                  rows={2}
+                  inputRef={register}
+                />
+              </Grid>
+
+              <Grid item xs={12}>
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  onClick={() => addSubScenario(index)}
+                >
+                  Add Sub-Scenario
+                </Button>
+              </Grid>
+              {watch(`parameterizedRequestScenarios[${index}].scenarios`)?.map(
+                (subScenario, subIndex) => (
+                  <Paper
+                    key={subIndex}
+                    style={{ padding: 16, marginBottom: 16 }}
+                  >
+                    <Typography>
+                      Sub-Scenario #{subIndex + 1}
+                    </Typography>
+                    <Grid container spacing={2}>
+                      <Grid item xs={6}>
+                        <TextField
+                          label="Unique Identifier"
+                          name={`parameterizedRequestScenarios[${index}].scenarios[${subIndex}].uniqueIdentifier`}
+                          fullWidth
+                          variant="outlined"
+                          inputRef={register}
+                        />
+                      </Grid>
+                      <Grid item xs={12}>
+                        <TextField
+                          label="Request URL Query Parameters (Optional)"
+                          name={`parameterizedRequestScenarios[${index}].scenarios[${subIndex}].requestURLQueryParameters`}
+                          fullWidth
+                          variant="outlined"
+                          multiline
+                          rows={2}
+                          inputRef={register}
+                        />
+                      </Grid>
+                      <Grid item xs={12}>
+                        <TextField
+                          label="Request Payload (Optional)"
+                          name={`parameterizedRequestScenarios[${index}].scenarios[${subIndex}].requestPayload`}
+                          fullWidth
+                          variant="outlined"
+                          multiline
+                          rows={2}
+                          inputRef={register}
+                        />
+                      </Grid>
+                    </Grid>
+                  </Paper>
+                )
+              )}
+              <Grid item xs={12}>
+                <IconButton onClick={() => remove(index)}>
+                  <Remove />
+                </IconButton>
+              </Grid>
+            </Grid>
+          </Paper>
+        ))}
+        <Button variant="outlined" color="primary" onClick={addScenario}>
+          Add Parameterized Scenario
+        </Button>
+
+        <Button
+          type="submit"
+          variant="contained"
+          color="primary"
+          style={{ marginTop: 16 }}
+        >
+          Submit
+        </Button>
+      </form>
+    </Container>
   );
-}
+};
 
-// Validate URL pattern (wildcards allowed)
-function isValidUrl(string) {
-  try {
-    new URL(string);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-// Convert wildcard pattern to a valid URL
-function convertToUrl(pattern) {
-  if (/^\*+/i.test(pattern)) {
-    return pattern.replace(/^\*+/i, "http://example.com");
-  }
-  return pattern;
-}
-
-// Validate the request body
-function validateRequestBody(body) {
-  const errors = [];
-
-  // Validate requestUrl
-  if (!body.requestUrl) {
-    errors.push("Request URL is a mandatory field.");
-  } else if (!isValidUrl(body.requestUrl)) {
-    errors.push(
-      "Request URL should be a valid URL or contain wildcards (*). Add * in the beginning if no base URL added."
-    );
-  } else if (body.requestUrl.includes("?")) {
-    errors.push(
-      "Request URL should not contain URL parameters (e.g., ?param=value)."
-    );
-  }
-
-  // Validate requestMethod
-  const allowedMethods = ["GET", "POST", "PATCH", "PUT", "DELETE"];
-  if (
-    !body.requestMethod ||
-    !allowedMethods.includes(body.requestMethod.toUpperCase())
-  ) {
-    errors.push(
-      "Request Method is a mandatory field and should be one of the following: GET, POST, PATCH, PUT, DELETE."
-    );
-  }
-
-  // Validate responseStatusCode
-  if (!(body.responseStatusCode >= 100 && body.responseStatusCode <= 599)) {
-    errors.push("Response Status Code should be a valid HTTP status code.");
-  }
-
-  if (!body.response) {
-    errors.push("Response is a mandatory field.");
-  }
-
-  // Validate responseHeaders
-  if (body.responseHeaders && !isValidObject(body.responseHeaders)) {
-    errors.push(
-      "Response Headers should be a valid object of key-value pairs."
-    );
-  }
-
-  // Validate parameterizedRequestScenarios
-  if (body.parameterizedRequestScenarios) {
-    body.parameterizedRequestScenarios.forEach((scenario, index) => {
-      const scenarioErrors = validateScenario(scenario, index + 1);
-      errors.push(...scenarioErrors);
-    });
-  }
-
-  return errors.length ? errors : null;
-}
-
-// Validate scenarios inside parameterizedRequestScenarios
-function validateScenario(scenario, scenarioIndex) {
-  const errors = [];
-
-  if (
-    !(scenario.responseStatusCode >= 100 && scenario.responseStatusCode <= 599)
-  ) {
-    errors.push(
-      `Scenario #${scenarioIndex}: Response Status Code should be a valid HTTP status code.`
-    );
-  }
-  if (!scenario.response)
-    errors.push(`Scenario #${scenarioIndex}: Response is a mandatory field.`);
-
-  if (scenario.responseHeaders && !isValidObject(scenario.responseHeaders)) {
-    errors.push(
-      `Scenario #${scenarioIndex}: Response Headers should be a valid object of key-value pairs.`
-    );
-  }
-
-  if (!Array.isArray(scenario.scenarios) || !scenario.scenarios.length) {
-    errors.push(
-      `Scenario #${scenarioIndex}: should have valid scenario conditions.`
-    );
-  } else {
-    scenario.scenarios.forEach((subScenario, subScenarioIndex) => {
-      const subScenarioErrors = validateSubScenario(
-        subScenario,
-        scenarioIndex,
-        subScenarioIndex + 1
-      );
-      errors.push(...subScenarioErrors);
-    });
-  }
-
-  return errors;
-}
-
-// Validate sub-scenario details
-function validateSubScenario(subScenario, scenarioIndex, subScenarioIndex) {
-  const errors = [];
-
-  if (!isValidObject(subScenario)) {
-    errors.push(
-      `Scenario #${scenarioIndex}, Sub-scenario #${subScenarioIndex}: Should contain a valid scenario.`
-    );
-  }
-
-  if (
-    subScenario.uniqueIdentifier &&
-    !["number", "boolean", "string"].includes(
-      typeof subScenario.uniqueIdentifier
-    )
-  ) {
-    errors.push(
-      `Scenario #${scenarioIndex}, Sub-scenario #${subScenarioIndex}: 'Unique Identifier' should have a valid value.`
-    );
-  }
-
-  if (
-    subScenario.requestPayload &&
-    !isValidObject(subScenario.requestPayload)
-  ) {
-    errors.push(
-      `Scenario #${scenarioIndex}, Sub-scenario #${subScenarioIndex}: 'Request Payload' should be a valid object of key-value pairs.`
-    );
-  }
-
-  if (
-    subScenario.requestURLQueryParameters &&
-    !isValidObject(subScenario.requestURLQueryParameters)
-  ) {
-    errors.push(
-      `Scenario #${scenarioIndex}, Sub-scenario #${subScenarioIndex}: 'Request Query Parameter' should be a valid object of key-value pairs.`
-    );
-  }
-
-  return errors;
-}
-
-// Main Routes
-
-let mockData = readMockData();
-
-// Create a new mock object with auto-increment id
-app.post("/api/mock-data-interceptor", (req, res) => {
-  const errors = validateRequestBody(req.body);
-  if (errors) return res.status(400).json({ errors });
-
-  // Check for duplicate requestUrl and requestMethod combination
-  const existingMock = mockData.find(
-    (item) =>
-      item.requestUrl === req.body.requestUrl &&
-      item.requestMethod === req.body.requestMethod
-  );
-
-  if (existingMock) {
-    return res.status(400).json({
-      error: "Duplicate Request URL and Request Method combination detected.",
-    });
-  }
-
-  // Generate auto-increment id
-  const newId =
-    mockData.length > 0 ? Math.max(...mockData.map((item) => item.id)) + 1 : 1;
-  const newMockData = { ...req.body, id: newId };
-
-  mockData.push(newMockData);
-  writeMockData(mockData);
-
-  res.json({ message: "Mock data created successfully.", data: newMockData });
-});
-
-// Read all mock objects
-app.get("/api/mock-data-interceptor", (req, res) => {
-  res.json(mockData);
-});
-
-// Read a specific mock object
-app.get("/api/mock-data-interceptor/:id", (req, res) => {
-  const mock = mockData.find((item) => item.id === parseInt(req.params.id));
-  if (!mock) {
-    return res.status(404).json({ error: "Mock data not found." });
-  }
-  res.json(mock);
-});
-
-// Update a specific mock object
-app.put("/api/mock-data-interceptor/:id", (req, res) => {
-  const id = parseInt(req.params.id);
-  const existingMockIndex = mockData.findIndex((item) => item.id === id);
-
-  if (existingMockIndex === -1) {
-    return res.status(404).json({ error: "Mock data not found." });
-  }
-
-  const errors = validateRequestBody(req.body);
-  if (errors) return res.status(400).json({ errors });
-
-  // Check for duplicate requestUrl and requestMethod combination (excluding the current item)
-  const existingMock = mockData.find(
-    (item) =>
-      item.id !== id &&
-      item.requestUrl === req.body.requestUrl &&
-      item.requestMethod === req.body.requestMethod
-  );
-
-  if (existingMock) {
-    return res.status(400).json({
-      error: "Duplicate Request URL and Request Method combination detected.",
-    });
-  }
-
-  mockData[existingMockIndex] = { ...req.body, id };
-  writeMockData(mockData);
-
-  res.json({ message: "Mock data updated successfully.", data: req.body });
-});
-
-// Delete a specific mock object
-app.delete("/api/mock-data-interceptor/:id", (req, res) => {
-  const id = parseInt(req.params.id);
-  const existingMockIndex = mockData.findIndex((item) => item.id === id);
-  if (existingMockIndex === -1) {
-    return res.status(404).json({ error: "Mock data not found." });
-  }
-
-  mockData = mockData.filter((item) => item.id !== id);
-  writeMockData(mockData);
-
-  res.json({ message: "Mock data deleted successfully." });
-});
-
-// Start the server
-const PORT = 3001;
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+export default MockDataForm;
