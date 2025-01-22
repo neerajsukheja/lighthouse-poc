@@ -1,11 +1,222 @@
-The current execution of BDD (Behavior-Driven Development) scripts requires restarting the entire process from the beginning whenever a step in the script fails. This approach is inefficient, as even if a single step fails, the whole test suite must be re-executed from scratch. Consequently, developers face the following challenges:
+import { createServer } from "miragejs";
+import { Response } from "miragejs";
 
-    Time Wastage: Each time a failure occurs, the entire BDD script needs to be re-run, leading to significant delays, especially in long test scenarios.
+async function fetchMockRoutes() {
+  try {
+    const response = await fetch("http://localhost:3001/api/mock-routes");
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Failed to fetch mock routes:", error.message);
+    return [];
+  }
+}
 
-    Redundant Effort: Often, previous steps have already passed successfully, but developers are forced to re-run them repeatedly when a failure occurs in any subsequent step.
+// Helper function to match URL with wildcard support
+function isUrlMatched(request, mockRoutes) {
+  const url = request?.url || "";
+  const method = request?.method || "";
+  const path = url.split("?")[0];
+  return mockRoutes.some(({ requestUrl, requestMethod }) => {
+    if (method !== requestMethod) return false;
+    const regexPattern = requestUrl.replace(/\*/g, ".*").replace(/\?/g, "\\?");
+    return new RegExp("^" + regexPattern + "$").test(path);
+  });
+}
 
-    Unpredictable Failures: Even if the test passes after restarting from the beginning, future steps may still fail, causing developers to re-run the process multiple times until all steps pass in a single execution.
+// Helper function to check if all conditions in a scenario are met
+function isScenarioMatch(request, scenario) {
+  const { queryParams, requestBody } = request;
+  const urlParams = new URLSearchParams(queryParams);
 
-    Decreased Productivity: This manual re-execution of scripts hampers the productivity of developers, as they have to continually monitor the test process and intervene frequently to restart it.
+  const queryParamMatch = scenario.requestURLQueryParameters
+    ? Object.entries(scenario.requestURLQueryParameters).every(
+        ([key, value]) => urlParams.get(key) === value.toString()
+      )
+    : true;
 
-To resolve this issue, an enhanced execution mechanism is needed that allows the developer to resume the BDD script from the point of failure without re-running successful steps, thereby reducing execution time, effort, and potential frustration caused by repetitive failures.
+  const payloadMatch = scenario.requestPayload
+    ? (() => {
+        try {
+          const parsedRequestBody = JSON.parse(requestBody);
+          return Object.entries(scenario.requestPayload).every(
+            ([key, value]) => parsedRequestBody[key] === value
+          );
+        } catch {
+          return false;
+        }
+      })()
+    : true;
+
+  const uniqueIdentifier = "data";
+  const uniqueIdentifierMatch = scenario.uniqueIdentifier
+    ? uniqueIdentifier === scenario.uniqueIdentifier
+    : true;
+
+  return queryParamMatch && payloadMatch && uniqueIdentifierMatch;
+}
+
+// Helper function to find the matching scenario for a route
+function findMatchingScenario(route, request) {
+  return route.parameterizedRequestScenarios.find((scenario) => {
+    return scenario.scenarios.every((cond) => isScenarioMatch(request, cond));
+  });
+}
+
+export async function makeServer({ environment = "development" } = {}) {
+  // Fetch the mock routes from an external API
+  const mockRoutes = await fetchMockRoutes();
+
+  let server = createServer({
+    environment,
+    routes() {
+      mockRoutes.forEach((route) => {
+        this[route.requestMethod.toLowerCase()](
+          route.requestUrl,
+          (schema, request) => {
+            const matchingScenario = findMatchingScenario(route, request);
+
+            // If a matching scenario is found, use its response
+            const responseToReturn = matchingScenario
+              ? matchingScenario.response
+              : route.response;
+
+            return new Response(
+              matchingScenario?.responseStatusCode || route.responseStatusCode,
+              matchingScenario?.responseHeaders || route.responseHeaders || {},
+              JSON.stringify(responseToReturn)
+            );
+          }
+        );
+      });
+
+      this.passthrough((request) => {
+        // Passthrough only if the request is not mocked
+        return !isUrlMatched(request, mockRoutes);
+      });
+    },
+  });
+
+  return server;
+}
+
+
+
+[
+    {
+      requestUrl: "http://localhost:3001/api/simple-get",
+      requestMethod: "GET",
+      parameterizedRequestScenarios: [
+        {
+          responseStatusCode: 200,
+          response: { message: "ASC Data" },
+          responseHeaders: {
+            neeraj: "123",
+          },
+          scenarios: [{ requestURLQueryParameters: { sort: "asc" } }],
+        },
+        {
+          responseStatusCode: 200,
+          response: { message: "DESC Data" },
+          scenarios: [{ requestURLQueryParameters: { sort: "desc" } }],
+        },
+        {
+          responseStatusCode: 200,
+          response: { message: "Data with Unique Identifier Data" },
+          scenarios: [{ uniqueIdentifier: "data" }],
+        },
+        {
+          responseStatusCode: 200,
+          response: {
+            message:
+              "Data with Unique Identifier Data and requestURLQueryParameters",
+          },
+
+          scenarios: [
+            {
+              uniqueIdentifier: "data",
+              requestURLQueryParameters: { sort: "desc", age: 30 },
+            },
+          ],
+        },
+      ],
+      responseHeaders: {
+        neeraj: "test",
+      },
+      responseStatusCode: 200,
+      response: { message: "GET Response" },
+    },
+    {
+      requestUrl: "*/api/users/*/id",
+      requestMethod: "GET",
+      parameterizedRequestScenarios: [
+        {
+          responseStatusCode: 200,
+          response: { message: "USERS ASC Data" },
+          scenarios: [{ requestURLQueryParameters: { sort: "asc" } }],
+        },
+        {
+          responseStatusCode: 200,
+          response: { message: "USERS DESC Data" },
+          scenarios: [{ requestURLQueryParameters: { sort: "desc" } }],
+        },
+        {
+          responseStatusCode: 200,
+          response: { message: "USERS Data with Unique Identifier Data" },
+          scenarios: [{ uniqueIdentifier: "data" }],
+        },
+        {
+          responseStatusCode: 200,
+          response: { message: "USERS Data with Unique Identifier Data" },
+          scenarios: [
+            {
+              uniqueIdentifier: "data",
+              requestURLQueryParameters: { sort: "desc", age: 30 },
+            },
+          ],
+        },
+      ],
+      responseStatusCode: 200,
+      response: { message: "USERS GET Response" },
+    },
+    {
+      requestUrl: "http://localhost:3001/api/simple-get",
+      requestMethod: "POST",
+      parameterizedRequestScenarios: [
+        {
+          responseStatusCode: 200,
+          response: { message: "Request Payload name username." },
+          scenarios: [{ requestPayload: { id: 44, name: "userName" } }],
+        },
+        {
+          responseStatusCode: 200,
+          response: { message: "DESC Data" },
+          scenarios: [{ requestPayload: { id: 32, age: 30 } }],
+        },
+        {
+          responseStatusCode: 404,
+          response: { message: "This is error with unique identifier" },
+          scenarios: [{ uniqueIdentifier: "data" }],
+        },
+        {
+          responseStatusCode: 200,
+          response: {
+            message:
+              "Data with Unique Identifier and request payload and request url parameter",
+          },
+          scenarios: [
+            {
+              uniqueIdentifier: "secondData",
+              requestPayload: { id: 38, age: 50 },
+              requestURLQueryParameters: { sort: "desc", age: 30 },
+            },
+          ],
+        },
+      ],
+      responseStatusCode: 200,
+      response: { message: "POST Response" },
+    },
+  ]
