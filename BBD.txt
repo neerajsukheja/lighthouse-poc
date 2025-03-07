@@ -1,5 +1,96 @@
-Thank you for sharing the updated estimation for story completion. I understand that the previous estimations were not aligning well across different LOBs, and I appreciate the effort in refining the timeline.
+import android.graphics.Bitmap
+import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
+import android.webkit.WebResourceRequest
+import android.webkit.WebSettings
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import androidx.appcompat.app.AppCompatActivity
 
-However, as per our earlier discussions, I wanted to check if there’s any possibility to bring down the story completion dates. If the stories extend till mid-September, development would require approximately three more months, which would push production into 2026, considering release activities and testing.
+class MainActivity : AppCompatActivity() {
 
-If needed, we can hop on a call to discuss how we can efficiently adjust the plan and explore potential ways to optimize the timeline. Let me know your availability, and we can coordinate accordingly.
+    private lateinit var webView: WebView
+    private val timeoutHandler = Handler(Looper.getMainLooper())
+    private val timeoutRunnable = Runnable {
+        Log.e("WebViewCheck", "Page load timed out or blank page detected")
+    }
+    private var isPageLoaded = false
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        webView = WebView(this)
+        setContentView(webView)
+
+        // Configure WebView settings
+        webView.settings.apply {
+            javaScriptEnabled = true // Enable JavaScript
+            domStorageEnabled = true // Enable DOM storage for React apps
+            loadsImagesAutomatically = true
+            cacheMode = WebSettings.LOAD_DEFAULT
+        }
+
+        webView.webViewClient = object : WebViewClient() {
+
+            override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+                isPageLoaded = false
+                timeoutHandler.postDelayed(timeoutRunnable, 15000) // 15s timeout for dynamic content
+            }
+
+            override fun onPageFinished(view: WebView?, url: String?) {
+                super.onPageFinished(view, url)
+
+                // Inject JavaScript to monitor dynamically loaded content
+                webView.evaluateJavascript(
+                    """
+                    (function() {
+                        return new Promise(resolve => {
+                            let observer = new MutationObserver(() => {
+                                let bodyText = document.body.innerText.trim();
+                                let hasImages = document.getElementsByTagName('img').length > 0;
+                                let hasVisibleText = bodyText.length > 0;
+                                if (hasVisibleText || hasImages) {
+                                    observer.disconnect();
+                                    resolve(true);
+                                }
+                            });
+
+                            observer.observe(document.body, { childList: true, subtree: true });
+
+                            // Fallback in case no mutation happens (e.g., if already loaded)
+                            setTimeout(() => {
+                                let bodyText = document.body.innerText.trim();
+                                let hasImages = document.getElementsByTagName('img').length > 0;
+                                let hasVisibleText = bodyText.length > 0;
+                                observer.disconnect();
+                                resolve(hasVisibleText || hasImages);
+                            }, 5000);
+                        });
+                    })();
+                    """
+                ) { result ->
+                    isPageLoaded = result == "true"
+                    timeoutHandler.removeCallbacks(timeoutRunnable)
+
+                    if (isPageLoaded) {
+                        Log.d("WebViewCheck", "Page successfully loaded with content")
+                    } else {
+                        Log.e("WebViewCheck", "Blank page detected")
+                    }
+                }
+            }
+
+            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                return false
+            }
+        }
+
+        webView.loadUrl("https://your-react-app.com") // Replace with your React-based web page
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        timeoutHandler.removeCallbacks(timeoutRunnable)
+    }
+}
