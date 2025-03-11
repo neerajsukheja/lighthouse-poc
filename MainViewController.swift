@@ -166,3 +166,75 @@ struct WebView: UIViewRepresentable {
 
     func updateUIView(_ webView: WKWebView, context: Context) { }
 }
+
+import SwiftUI
+import WebKit
+
+struct WebView: UIViewRepresentable {
+    let urlString: String
+    @Binding var showWebView: Bool
+
+    class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
+        var parent: WebView
+
+        init(parent: WebView) {
+            self.parent = parent
+        }
+
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            let jsCheckContent = """
+            (function() {
+                let hasContent = document.body.innerText.trim().length > 0 || document.images.length > 0;
+                window.webkit.messageHandlers.noContentHandler.postMessage(hasContent);
+            })();
+            """
+
+            webView.evaluateJavaScript(jsCheckContent) { result, error in
+                if let error = error {
+                    print("JavaScript execution error: \(error.localizedDescription)")
+                    return
+                }
+
+                // Ensure result is a valid Boolean
+                if let hasContent = result as? Bool, !hasContent {
+                    DispatchQueue.main.async {
+                        self.parent.showWebView = false
+                    }
+                }
+            }
+        }
+
+        func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+            if message.name == "noContentHandler", let hasContent = message.body as? Bool {
+                DispatchQueue.main.async {
+                    if !hasContent {
+                        self.parent.showWebView = false
+                    }
+                }
+            }
+        }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        return Coordinator(parent: self)
+    }
+
+    func makeUIView(context: Context) -> WKWebView {
+        let config = WKWebViewConfiguration()
+        let contentController = WKUserContentController()
+        contentController.add(context.coordinator, name: "noContentHandler")
+        config.userContentController = contentController
+
+        let webView = WKWebView(frame: .zero, configuration: config)
+        webView.navigationDelegate = context.coordinator
+        
+        if let url = URL(string: urlString) {
+            webView.load(URLRequest(url: url))
+        }
+
+        return webView
+    }
+
+    func updateUIView(_ webView: WKWebView, context: Context) { }
+}
+
