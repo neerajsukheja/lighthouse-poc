@@ -235,6 +235,36 @@ struct WebView: UIViewRepresentable {
         return webView
     }
 
+
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+    let jsCheckContent = """
+    (function() {
+        let hasContent = document.body && document.body.innerText.trim().length > 0;
+        let hasImages = document.images.length > 0;
+        return hasContent || hasImages;
+    })();
+    """
+
+    webView.evaluateJavaScript(jsCheckContent) { result, error in
+        if let error = error {
+            print("JavaScript execution error: \(error.localizedDescription)")
+            return
+        }
+
+        // Ensure result is a valid Boolean
+        if let hasContent = result as? Bool {
+            DispatchQueue.main.async {
+                if !hasContent {
+                    print("No content detected. Closing WebView.")
+                    self.parent.showWebView = false
+                }
+            }
+        } else {
+            print("Unexpected JavaScript return value:", result ?? "nil")
+        }
+    }
+}
+
     func updateUIView(_ webView: WKWebView, context: Context) { }
 }
 
