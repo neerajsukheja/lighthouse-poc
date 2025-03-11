@@ -100,3 +100,69 @@ struct WebView: UIViewRepresentable {
 
     func updateUIView(_ webView: WKWebView, context: Context) { }
 }
+
+
+ import SwiftUI
+import WebKit
+
+struct WebView: UIViewRepresentable {
+    let urlString: String
+    @Binding var showWebView: Bool
+
+    class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
+        var parent: WebView
+
+        init(parent: WebView) {
+            self.parent = parent
+        }
+
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            let jsCheckContent = """
+            window.onload = function() {
+                let hasContent = document.body.innerText.trim().length > 0 || document.images.length > 0;
+                if (!hasContent) {
+                    window.webkit.messageHandlers.noContentHandler.postMessage("No content present");
+                }
+            };
+            """
+            
+            webView.evaluateJavaScript(jsCheckContent) { [weak self] _, error in
+                if let error = error {
+                    print("JavaScript execution error: \(error.localizedDescription)")
+                }
+            }
+        }
+
+        func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+            if message.name == "noContentHandler", let _ = message.body as? String {
+                DispatchQueue.main.async { [weak self] in
+                    self?.parent.showWebView = false
+                }
+            }
+        }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        return Coordinator(parent: self)
+    }
+
+    func makeUIView(context: Context) -> WKWebView {
+        let config = WKWebViewConfiguration()
+        let contentController = WKUserContentController()
+
+        // Inject JavaScript and handle messages
+        contentController.add(context.coordinator, name: "noContentHandler")
+        config.userContentController = contentController
+
+        let webView = WKWebView(frame: .zero, configuration: config)
+        webView.navigationDelegate = context.coordinator
+        
+        if let url = URL(string: urlString) {
+            webView.load(URLRequest(url: url))
+        }
+
+        return webView
+    }
+
+    func updateUIView(_ webView: WKWebView, context: Context) { }
+}
