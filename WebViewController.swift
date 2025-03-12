@@ -1,75 +1,86 @@
-import UIKit
+import SwiftUI
 import WebKit
 
-class WebViewController: UIViewController, WKNavigationDelegate, WKScriptMessageHandler {
+struct ContentView: View {
+    @State private var showWebView = false
     
-    var webView: WKWebView!
-    
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        setupWebView()
-        setupBackButton()
-        loadWebPage()
-    }
-    
-    private func setupWebView() {
-        let config = WKWebViewConfiguration()
-        let contentController = WKUserContentController()
-        
-        // Inject JavaScript to check for visible content
-        let jsCheckContent = """
-        window.onload = function() {
-            let hasContent = document.body.innerText.trim().length > 0 || document.images.length > 0;
-            if (!hasContent) {
-                window.webkit.messageHandlers.noContentHandler.postMessage("No content present");
+    var body: some View {
+        NavigationView {
+            VStack {
+                Button("Open WebView") {
+                    showWebView = true
+                }
+                .padding()
+                .navigationTitle("Home")
+                .fullScreenCover(isPresented: $showWebView) {
+                    WebViewScreen(showWebView: $showWebView)
+                }
             }
-        };
-        """
-        
-        let script = WKUserScript(source: jsCheckContent, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
-        contentController.addUserScript(script)
-        contentController.add(self, name: "noContentHandler")
-        
-        config.userContentController = contentController
-        webView = WKWebView(frame: .zero, configuration: config)
-        webView.navigationDelegate = self
-        webView.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(webView)
-        
-        NSLayoutConstraint.activate([
-            webView.topAnchor.constraint(equalTo: view.topAnchor),
-            webView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            webView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            webView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
-        ])
+        }
     }
+}
+
+struct WebViewScreen: View {
+    @Binding var showWebView: Bool
+    @State private var showAlert = false
     
-    private func setupBackButton() {
-        let backButton = UIBarButtonItem(title: "Back", style: .plain, target: self, action: #selector(goBack))
-        navigationItem.leftBarButtonItem = backButton
+    var body: some View {
+        NavigationView {
+            WebView(urlString: "http://localhost:3000", showAlert: $showAlert)
+                .navigationTitle("WebView")
+                .navigationBarItems(leading: Button("Back") {
+                    showWebView = false
+                })
+                .alert(isPresented: $showAlert) {
+                    Alert(title: Text("No Content Available"), message: nil, dismissButton: .default(Text("OK")))
+                }
+        }
     }
+}
+
+struct WebView: UIViewRepresentable {
+    let urlString: String
+    @Binding var showAlert: Bool
     
-    private func loadWebPage() {
-        if let url = URL(string: "http://localhost:3000") {
+    func makeUIView(context: Context) -> WKWebView {
+        let webView = WKWebView()
+        webView.navigationDelegate = context.coordinator
+        if let url = URL(string: urlString) {
             webView.load(URLRequest(url: url))
         }
+        return webView
     }
     
-    @objc private func goBack() {
-        navigationController?.popViewController(animated: true)
+    func updateUIView(_ uiView: WKWebView, context: Context) {}
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
     }
     
-    // Handle JavaScript message for no content detection
-    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
-        if message.name == "noContentHandler", let _ = message.body as? String {
-            showAlert("No content present")
-            // Later replace this alert with Splunk logging
+    class Coordinator: NSObject, WKNavigationDelegate {
+        var parent: WebView
+        
+        init(_ parent: WebView) {
+            self.parent = parent
+        }
+        
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            webView.evaluateJavaScript("document.body.innerText.trim().length > 0 || document.images.length > 0") { result, error in
+                if let hasContent = result as? Bool, !hasContent {
+                    DispatchQueue.main.async {
+                        self.parent.showAlert = true
+                    }
+                }
+            }
         }
     }
-    
-    private func showAlert(_ message: String) {
-        let alert = UIAlertController(title: "Alert", message: message, preferredStyle: .alert)
-        alert.addAction(UIAlertAction(title: "OK", style: .default))
-        present(alert, animated: true)
+}
+
+@main
+struct MyApp: App {
+    var body: some Scene {
+        WindowGroup {
+            ContentView()
+        }
     }
 }
