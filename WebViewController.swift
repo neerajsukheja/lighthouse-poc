@@ -65,7 +65,14 @@ struct WebView: UIViewRepresentable {
         }
         
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            webView.evaluateJavaScript("document.body.innerText.trim().length > 0 || document.images.length > 0") { result, error in
+            webView.evaluateJavaScript("""
+                (function() {
+                    let textContent = document.body.innerText.trim();
+                    let hasImages = document.querySelectorAll('img').length > 0;
+                    let hasElements = document.body.innerHTML.replace(/\s/g, '').length > 0;
+                    return textContent.length > 0 || hasImages || hasElements;
+                })()
+            """) { result, error in
                 if let hasContent = result as? Bool, !hasContent {
                     DispatchQueue.main.async {
                         self.parent.showAlert = true
