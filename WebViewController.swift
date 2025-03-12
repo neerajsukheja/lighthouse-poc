@@ -65,17 +65,20 @@ struct WebView: UIViewRepresentable {
         }
         
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            webView.evaluateJavaScript("""
-                (function() {
-                    let textContent = document.body.innerText.trim();
-                    let hasImages = document.querySelectorAll('img').length > 0;
-                    let hasElements = document.body.innerHTML.replace(/\s/g, '').length > 0;
-                    return textContent.length > 0 || hasImages || hasElements;
-                })()
-            """) { result, error in
-                if let hasContent = result as? Bool, !hasContent {
-                    DispatchQueue.main.async {
-                        self.parent.showAlert = true
+            // Wait for 2 seconds before evaluating JavaScript to ensure React content loads
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                webView.evaluateJavaScript("""
+                    (function() {
+                        let bodyText = document.body.innerText.trim();
+                        let images = document.images.length;
+                        let elements = document.querySelectorAll('*').length;
+                        return bodyText.length > 0 || images > 0 || elements > 10;
+                    })()
+                """) { result, error in
+                    if let hasContent = result as? Bool, !hasContent {
+                        DispatchQueue.main.async {
+                            self.parent.showAlert = true
+                        }
                     }
                 }
             }
