@@ -83,9 +83,40 @@ func checkWebViewContent(_ webView: WKWebView, completion: @escaping (Bool) -> V
     DispatchQueue.main.asyncAfter(deadline: .now() + 7.0) {  // Wait for 7 seconds to ensure React loads
         let script = """
             (function() {
-                let bodyText = document.body.innerText.trim();
-                let images = document.images.length;
-                return bodyText.length > 0 || images > 0;
+                let ignoreClassPatterns = ["header*", "nav-bar*", "top-section*"];  // Wildcard class patterns
+                let ignoreIdPatterns = ["main-header*", "top-banner*"];  // Wildcard ID patterns
+
+                function matchesPattern(text, patterns) {
+                    return patterns.some(pattern => {
+                        let regex = new RegExp("^" + pattern.replace("*", ".*") + "$");
+                        return regex.test(text);
+                    });
+                }
+
+                function hasContent(element) {
+                    let text = element.innerText.trim();
+                    let images = element.getElementsByTagName("img").length;
+                    return text.length > 0 || images > 0;
+                }
+
+                let elements = document.body.getElementsByTagName("*");
+                for (let el of elements) {
+                    let classNames = el.className.split(" ");
+                    let idName = el.id;
+
+                    // Skip elements that match ignored class or ID patterns
+                    if (classNames.some(cls => matchesPattern(cls, ignoreClassPatterns)) ||
+                        (idName && matchesPattern(idName, ignoreIdPatterns))) {
+                        continue;
+                    }
+
+                    // If a valid element has content, return true
+                    if (hasContent(el)) {
+                        return true;
+                    }
+                }
+
+                return false;  // No meaningful content found
             })()
         """
         webView.evaluateJavaScript(script) { result, error in
@@ -106,3 +137,6 @@ struct MyApp: App {
         }
     }
 }
+
+
+
