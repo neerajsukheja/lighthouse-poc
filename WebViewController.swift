@@ -83,8 +83,8 @@ func checkWebViewContent(_ webView: WKWebView, completion: @escaping (Bool) -> V
     DispatchQueue.main.asyncAfter(deadline: .now() + 7.0) {  // Wait for 7 seconds to ensure React loads
         let script = """
             (function() {
-                let ignoreClassPatterns = ["header*", "nav-bar*", "top-section*"];  // Wildcard class patterns
-                let ignoreIdPatterns = ["main-header*", "top-banner*"];  // Wildcard ID patterns
+                let ignoreClassPatterns = ["header*", "nav-bar*", "top-section*"];  // Class patterns to ignore
+                let ignoreIdPatterns = ["main-header*", "top-banner*"];  // ID patterns to ignore
 
                 function matchesPattern(text, patterns) {
                     return patterns.some(pattern => {
@@ -93,30 +93,30 @@ func checkWebViewContent(_ webView: WKWebView, completion: @escaping (Bool) -> V
                     });
                 }
 
-                function hasContent(element) {
-                    let text = element.innerText.trim();
-                    let images = element.getElementsByTagName("img").length;
-                    return text.length > 0 || images > 0;
-                }
-
                 let elements = document.body.getElementsByTagName("*");
+                let contentFound = false;
+
                 for (let el of elements) {
                     let classNames = el.className.split(" ");
                     let idName = el.id;
 
-                    // Skip elements that match ignored class or ID patterns
+                    // Skip elements matching ignored class or ID patterns
                     if (classNames.some(cls => matchesPattern(cls, ignoreClassPatterns)) ||
                         (idName && matchesPattern(idName, ignoreIdPatterns))) {
                         continue;
                     }
 
-                    // If a valid element has content, return true
-                    if (hasContent(el)) {
-                        return true;
+                    // Check if the remaining elements have content
+                    let text = el.innerText.trim();
+                    let images = el.getElementsByTagName("img").length;
+
+                    if (text.length > 0 || images > 0) {
+                        contentFound = true;
+                        break;  // Stop checking if content is found
                     }
                 }
 
-                return false;  // No meaningful content found
+                return contentFound;
             })()
         """
         webView.evaluateJavaScript(script) { result, error in
