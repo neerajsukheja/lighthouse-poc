@@ -5,7 +5,9 @@ func checkWebViewContent(_ webView: WKWebView, completion: @escaping (Bool) -> V
                 let ignoredClasses = ['header', 'head', 'logo'];
                 
                 function hasValidContent(element) {
-                    if (!element) return false;
+                    if (!element || element.tagName && element.tagName.toLowerCase() === "noscript") {
+                        return false;
+                    }
 
                     // Get class names as an array
                     var classNames = element.className ? element.className.split(" ") : [];
