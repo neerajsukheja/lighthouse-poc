@@ -3,11 +3,8 @@ func checkWebViewContent(_ webView: WKWebView, completion: @escaping (Bool) -> V
         let script = """
             (function() {
                 let ignoredClasses = ['header', 'head'];
-                let body = document.body;
-                if (!body) return false;  // If body is null, return false
-
-                let allElements = body.getElementsByTagName('*');
-                console.log("Total elements found: ", allElements.length);
+                let allElements = document.body.getElementsByTagName('*');
+                let hasValidContent = false;
 
                 for (let i = 0; i < allElements.length; i++) {
                     let element = allElements[i];
@@ -18,14 +15,14 @@ func checkWebViewContent(_ webView: WKWebView, completion: @escaping (Bool) -> V
                         let images = element.getElementsByTagName('img').length;
                         let isVisible = !!(element.offsetWidth || element.offsetHeight || element.getClientRects().length);
                         
-                        console.log("Element Checked: ", element.tagName, "Visible:", isVisible, "Text:", textContent);
-
                         if ((textContent.length > 0 || images > 0) && isVisible) {
-                            return true;
+                            hasValidContent = true;
+                            break;
                         }
                     }
                 }
-                return false;
+                console.log("Has valid content:", hasValidContent);
+                return hasValidContent;
             })()
         """;
         
