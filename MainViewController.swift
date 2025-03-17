@@ -2,27 +2,39 @@ func checkWebViewContent(_ webView: WKWebView, completion: @escaping (Bool) -> V
     DispatchQueue.main.asyncAfter(deadline: .now() + 7.0) {  // Wait for 7 seconds to ensure React loads
         let script = """
             (function() {
-                let ignoredClasses = ['header', 'head'];
-
+                let ignoredClasses = ['header', 'head', 'logo'];
+                
                 function hasValidContent(element) {
-                    if (!element || ignoredClasses.some(cls => element.classList.contains(cls))) {
-                        return false; // Ignore this element and its children
+                    if (!element) return false;
+
+                    // Get class names as an array
+                    var classNames = element.className ? element.className.split(" ") : [];
+
+                    // If the element has a class that should be ignored, skip it
+                    if (ignoredClasses.some(cls => classNames.includes(cls))) {
+                        return false;
                     }
 
-                    let textContent = element.innerText.trim();
-                    let images = element.getElementsByTagName('img').length;
-                    let isVisible = !!(element.offsetWidth || element.offsetHeight || element.getClientRects().length);
-
-                    if ((textContent.length > 0 || images > 0) && isVisible) {
-                        return true;
-                    }
-
-                    // Recursively check child elements
-                    for (let child of element.children) {
-                        if (hasValidContent(child)) {
+                    // Check if the element has text content
+                    if (element.nodeType === 3) { // Node.TEXT_NODE (3)
+                        var text = element.nodeValue.trim();
+                        if (text.length > 0) {
                             return true;
                         }
                     }
+
+                    // Check if the element is an image
+                    if (element.tagName && element.tagName.toLowerCase() === "img" && element.src) {
+                        return true;
+                    }
+
+                    // Recursively check child nodes
+                    for (var i = 0; i < element.childNodes.length; i++) {
+                        if (hasValidContent(element.childNodes[i])) {
+                            return true;
+                        }
+                    }
+
                     return false;
                 }
 
