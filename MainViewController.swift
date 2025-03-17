@@ -3,28 +3,30 @@ func checkWebViewContent(_ webView: WKWebView, completion: @escaping (Bool) -> V
         let script = """
             (function() {
                 let ignoredClasses = ['header', 'head'];
-                let allElements = document.body.children;
-                let hasValidContent = false;
 
-                function shouldIgnore(element) {
-                    return ignoredClasses.some(cls => element.classList.contains(cls));
-                }
+                function hasValidContent(element) {
+                    if (!element || ignoredClasses.some(cls => element.classList.contains(cls))) {
+                        return false; // Ignore this element and its children
+                    }
 
-                for (let i = 0; i < allElements.length; i++) {
-                    let element = allElements[i];
-                    if (shouldIgnore(element)) continue; // Skip entire ignored elements
-                    
                     let textContent = element.innerText.trim();
                     let images = element.getElementsByTagName('img').length;
                     let isVisible = !!(element.offsetWidth || element.offsetHeight || element.getClientRects().length);
-                    
+
                     if ((textContent.length > 0 || images > 0) && isVisible) {
-                        hasValidContent = true;
-                        break;
+                        return true;
                     }
+
+                    // Recursively check child elements
+                    for (let child of element.children) {
+                        if (hasValidContent(child)) {
+                            return true;
+                        }
+                    }
+                    return false;
                 }
-                console.log("Has valid content:", hasValidContent);
-                return hasValidContent;
+
+                return hasValidContent(document.body);
             })()
         """;
         
