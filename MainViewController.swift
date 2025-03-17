@@ -127,7 +127,17 @@ func checkWebViewContent(_ webView: WKWebView, completion: @escaping (Bool) -> V
 
                     return false;
                 }
+                // Check if the error message is present in the page
+    let errorMessages = [
+        "Webpage not available",
+        "net::ERR_CONNECTION_REFUSED",
+        "This site can’t be reached"
+    ];
 
+    let pageText = document.body.innerText || "";
+    if (errorMessages.some(msg => pageText.includes(msg))) {
+        return false;
+    }
                 return hasValidContent(document.body);
             })()
         """;
