@@ -3,22 +3,24 @@ func checkWebViewContent(_ webView: WKWebView, completion: @escaping (Bool) -> V
         let script = """
             (function() {
                 let ignoredClasses = ['header', 'head'];
-                let allElements = document.body.getElementsByTagName('*');
+                let allElements = document.body.children;
                 let hasValidContent = false;
+
+                function shouldIgnore(element) {
+                    return ignoredClasses.some(cls => element.classList.contains(cls));
+                }
 
                 for (let i = 0; i < allElements.length; i++) {
                     let element = allElements[i];
-                    let classList = Array.from(element.classList);
+                    if (shouldIgnore(element)) continue; // Skip entire ignored elements
                     
-                    if (!classList.some(cls => ignoredClasses.includes(cls))) {
-                        let textContent = element.innerText.trim();
-                        let images = element.getElementsByTagName('img').length;
-                        let isVisible = !!(element.offsetWidth || element.offsetHeight || element.getClientRects().length);
-                        
-                        if ((textContent.length > 0 || images > 0) && isVisible) {
-                            hasValidContent = true;
-                            break;
-                        }
+                    let textContent = element.innerText.trim();
+                    let images = element.getElementsByTagName('img').length;
+                    let isVisible = !!(element.offsetWidth || element.offsetHeight || element.getClientRects().length);
+                    
+                    if ((textContent.length > 0 || images > 0) && isVisible) {
+                        hasValidContent = true;
+                        break;
                     }
                 }
                 console.log("Has valid content:", hasValidContent);
