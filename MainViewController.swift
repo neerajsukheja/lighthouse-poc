@@ -1,10 +1,10 @@
 let script = """
             (function() {
                 let ignoredClasses = ['header', 'head'];
-                let elements = document.body.children;
+                let allElements = document.body.getElementsByTagName('*');
                 
-                for (let i = 0; i < elements.length; i++) {
-                    let element = elements[i];
+                for (let i = 0; i < allElements.length; i++) {
+                    let element = allElements[i];
                     let classList = Array.from(element.classList);
                     
                     if (!classList.some(cls => ignoredClasses.includes(cls))) {
