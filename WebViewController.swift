@@ -32,7 +32,12 @@ struct WebViewScreen: View {
                 .navigationTitle("WebView")
                 .navigationBarItems(leading: Button("Back") { showWebView = false })
                 .alert(isPresented: $showAlert) {
-                    Alert(title: Text("No Content Available"), dismissButton: .default(Text("OK")))
+                    Alert(
+                        title: Text("No Content Available"),
+                        dismissButton: .default(Text("OK")) {
+                            showWebView = true  // Reopen WebView when OK is clicked
+                        }
+                    )
                 }
         }
     }
@@ -68,9 +73,9 @@ struct WebView: UIViewRepresentable {
 
         /// Called when the webpage has finished loading.
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            checkWebViewContent(webView) { hasContent in
+            checkWebViewContent(webView) { result in
                 DispatchQueue.main.async {
-                    parent.showAlert = !hasContent
+                    parent.showAlert = !(result["result"] as? Bool ?? false)
                 }
             }
         }
@@ -79,51 +84,58 @@ struct WebView: UIViewRepresentable {
 
 /// A reusable function to check if a WebView has visible content.
 /// This function can be used across different screens.
-func checkWebViewContent(_ webView: WKWebView, completion: @escaping (Bool) -> Void) {
-    DispatchQueue.main.asyncAfter(deadline: .now() + 7.0) {  // Wait for 7 seconds to ensure React loads
+func checkWebViewContent(_ webView: WKWebView, completion: @escaping ([String: Any]) -> Void) {
+    DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {  // Wait to ensure React loads
         let script = """
-            (function() {
-                let ignoreClassPatterns = ["header*", "nav-bar*", "top-section*"];  // Class patterns to ignore
-                let ignoreIdPatterns = ["main-header*", "top-banner*"];  // ID patterns to ignore
-
-                function matchesPattern(text, patterns) {
-                    return patterns.some(pattern => {
-                        let regex = new RegExp("^" + pattern.replace("*", ".*") + "$");
-                        return regex.test(text);
-                    });
-                }
-
-                let elements = document.body.getElementsByTagName("*");
-                let contentFound = false;
-
-                for (let el of elements) {
-                    let classNames = el.className.split(" ");
-                    let idName = el.id;
-
-                    // Skip elements matching ignored class or ID patterns
-                    if (classNames.some(cls => matchesPattern(cls, ignoreClassPatterns)) ||
-                        (idName && matchesPattern(idName, ignoreIdPatterns))) {
-                        continue;
+        document.addEventListener("DOMContentLoaded", function () {
+            function checkPageContent(classArray = [], idArray = []) {
+                try {
+                    const contentSelectors = "img, video, canvas, form, iframe, embed, object, audio, picture, svg, map, source, track, blockquote, cite, button, label, select, textarea, table, th, td, ul, ol, li";
+                    const errorMessages = [
+                        "Webpage not available",
+                        "net::ERR_CONNECTION_REFUSED",
+                        "This site can't be reached"
+                    ];
+                    
+                    if (errorMessages.some(msg => document.body.innerText.includes(msg))) {
+                        return { result: false };
                     }
-
-                    // Check if the remaining elements have content
-                    let text = el.innerText.trim();
-                    let images = el.getElementsByTagName("img").length;
-
-                    if (text.length > 0 || images > 0) {
-                        contentFound = true;
-                        break;  // Stop checking if content is found
+                    
+                    if (classArray.length > 0) {
+                        for (let className of classArray) {
+                            let elements = document.getElementsByClassName(className);
+                            for (let element of elements) {
+                                if (element.innerText.trim() || element.querySelector(contentSelectors)) {
+                                    return { result: true };
+                                }
+                            }
+                        }
                     }
+                    
+                    if (idArray.length > 0) {
+                        for (let idName of idArray) {
+                            let element = document.getElementById(idName);
+                            if (element && (element.innerText.trim() || element.querySelector(contentSelectors))) {
+                                return { result: true };
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error("Unexpected error in checkPageContent:", error);
                 }
-
-                return contentFound;
-            })()
+                return { result: false };
+            }
+            
+            const classArray = ["content", "article"];
+            const idArray = ["mainContent", "pageContainer"];
+            return checkPageContent(classArray, idArray);
+        });
         """
         webView.evaluateJavaScript(script) { result, error in
-            if let hasContent = result as? Bool {
-                completion(hasContent)  // Returns true if content exists, false otherwise
+            if let json = result as? [String: Any] {
+                completion(json)  // Returns an object with result boolean
             } else {
-                completion(false)  // Default to false if there's an error
+                completion(["result": false])  // Default to false if there's an error
             }
         }
     }
@@ -137,6 +149,3 @@ struct MyApp: App {
         }
     }
 }
-
-
-
