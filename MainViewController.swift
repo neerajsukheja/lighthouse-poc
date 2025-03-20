@@ -14,7 +14,7 @@ document.addEventListener("DOMContentLoaded", function () {
             }
 
             // Optimized regex pattern for wildcard class matching
-            const wildcardRegex = classArray.length ? new RegExp(`^(${classArray.join('|')})([_-][a-zA-Z0-9]+)?$`) : null;
+           const wildcardRegex = classArray.length ? new RegExp(`^(${classArray.join('|')})([\\w-]*)?$`) : null;
 
             // Check if content exists in elements with matching classes
             for (let element of document.querySelectorAll("[class]")) {
