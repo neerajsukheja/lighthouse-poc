@@ -31,6 +31,15 @@ document.addEventListener("DOMContentLoaded", function () {
                     return { "result": true };
                 }
             }
+
+            for (let dataAttr of dataAttrArray) {
+                let elements = document.querySelectorAll(`[${dataAttr}]`);
+                for (let element of elements) {
+                    if (element.innerText.trim() || element.querySelector(contentSelectors)) {
+                        return { "result": true };
+                    }
+                }
+            }
         } catch (error) {
             console.error("Unexpected error in checkPageContent:", error);
         }
