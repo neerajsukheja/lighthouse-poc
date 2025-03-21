@@ -1,14 +1,17 @@
-Problem Statement:
-This code was written because multiple cases were reported in the native WebView where users encountered a blank screen. Even Glassbox was unable to capture this event, preventing the platform team from logging and diagnosing the issue effectively.
+Hi [Manager's Name],
 
-Proposed Solution:
-To detect and address blank screen issues in WebView, we implemented JavaScript injection at the native level for both iOS and Android. This decision was made because adding JavaScript at the web application level would not be effective. If the issue originates from the backend (such as JSP rendering failures), the JavaScript would never reach execution, making it impossible to capture such failures. By injecting the script at the native level, we ensure that blank screens can be detected regardless of whether the issue occurs in the frontend or backend, allowing us to capture logs and alert the platform team accordingly.
+The team has finalized the approach for reverse engineering the jQuery-based application. We will be:
 
-Perceived Benefits
-Enhanced Debugging: Allows the platform team to detect blank screens and capture relevant logs for analysis.
+    Exploring the web app with different test data for each LOB and capturing observations.
+    Reviewing the code only for the business logic tested in the UI, without deep analysis. We will also identify any flags used in the code for specific scenarios.
+    Taking screenshots to help the business team understand requirements easily.
 
-Improved User Experience: Helps in identifying and resolving blank screen issues proactively, reducing user frustration.
+We acknowledge the following limitations:
 
-Cross-Platform Support: Works on both iOS and Android without requiring changes to the web application.
+    Our validation coverage depends on the available test data.
+    Due to time constraints, we may not capture all validation scenarios in detail.
 
-Better Monitoring: Enables Glassbox or other monitoring tools to log such occurrences, aiding in troubleshooting and fixing issues faster.
+Please find the attached reverse engineering plan for your reference. Let us know if you have any feedback.
+
+Best,
+[Your Name]
