@@ -1,17 +1,29 @@
-Hi [Manager's Name],
+1. Extract Design Info from Figma
 
-The team has finalized the approach for reverse engineering the jQuery-based application. We will be:
+    Use Figma API to read layout, text, components, etc.
 
-    Exploring the web app with different test data for each LOB and capturing observations.
-    Reviewing the code only for the business logic tested in the UI, without deep analysis. We will also identify any flags used in the code for specific scenarios.
-    Taking screenshots to help the business team understand requirements easily.
+2. Understand Our Component Library
 
-We acknowledge the following limitations:
+    Automatically scan our UI framework to get:
 
-    Our validation coverage depends on the available test data.
-    Due to time constraints, we may not capture all validation scenarios in detail.
+        Component names, props, and examples
 
-Please find the attached reverse engineering plan for your reference. Let us know if you have any feedback.
+        Usage from Storybook (if available)
 
-Best,
-[Your Name]
+3. Smart Mapping Engine
+
+    Match Figma sections to our components using:
+
+        Layout, keywords, styles
+
+        Rules for complex cases (e.g., Header → CompanyHeader)
+
+4. Generate Clean React Code
+
+    AI generates reusable, readable React components
+
+    Can choose between TypeScript or JavaScript
+
+5. Dev-Friendly Interfaces
+
+    CLI tool, Web UI, or VS Code extension to use it easily
