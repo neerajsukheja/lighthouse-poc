@@ -1,29 +1,9 @@
-1. Extract Design Info from Figma
+Update on Scrum Workload
 
-    Use Figma API to read layout, text, components, etc.
+Hi [Manager's Name],
 
-2. Understand Our Component Library
+As discussed, I reconnected with the other leads to confirm the current workload across scrums. While earlier conversations suggested that several scrums were light on work, most leads have now confirmed they currently have active items in progress.
 
-    Automatically scan our UI framework to get:
+At this point, only the Transfers scrum, which I’m leading, remains without significant work.
 
-        Component names, props, and examples
-
-        Usage from Storybook (if available)
-
-3. Smart Mapping Engine
-
-    Match Figma sections to our components using:
-
-        Layout, keywords, styles
-
-        Rules for complex cases (e.g., Header → CompanyHeader)
-
-4. Generate Clean React Code
-
-    AI generates reusable, readable React components
-
-    Can choose between TypeScript or JavaScript
-
-5. Dev-Friendly Interfaces
-
-    CLI tool, Web UI, or VS Code extension to use it easily
+Let me know if you'd like a detailed summary.
