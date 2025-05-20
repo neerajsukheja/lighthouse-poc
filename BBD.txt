@@ -1,9 +1,67 @@
-Update on Scrum Workload
+Problem Statement 1: Long Build Times Due to Coupled UI and Backend Jobs
 
-Hi [Manager's Name],
+Currently, when a UI change is made, triggering the UI Jenkins job also initiates a full web build for all WIBTP projects. This results in a build time of 2–3 hours, significantly affecting developer productivity and delaying deployments.
 
-As discussed, I reconnected with the other leads to confirm the current workload across scrums. While earlier conversations suggested that several scrums were light on work, most leads have now confirmed they currently have active items in progress.
+Proposed Solution:
 
-At this point, only the Transfers scrum, which I’m leading, remains without significant work.
+    Decouple UI and BE Jobs: Make UI and backend builds independent.
 
-Let me know if you'd like a detailed summary.
+    Reuse Pre-Built Artifacts: Configure Jenkins to fetch the latest BE JAR or UI WAR from Artifactory depending on the triggered build.
+
+    Automate Artifact Lookup: Allow Jenkins to search for the latest artifact automatically and only proceed with build if a valid artifact isn't found.
+
+Advantages:
+
+    Reduces unnecessary build time.
+
+    Allows quick UI validations without backend rebuilds.
+
+    Decreases dependency on manual communication with RTL/DARE teams.
+
+    Improves resource efficiency across Jenkins infrastructure.
+
+Problem Statement 2: Repeated npm install Delays Build Execution
+
+Every time a UI Jenkins job is triggered, it runs a fresh npm install, which installs all dependencies from scratch—even when no changes have been made to package.json or package-lock.json. This leads to unnecessary delays across PR builds, release builds, and BDD automation jobs.
+
+Proposed Solution:
+
+Implement a caching mechanism in the Jenkins pipeline:
+
+    Store node_modules in a dedicated workspace cache directory.
+
+    Before executing npm install, compare the current package-lock.json with the previous version.
+
+    If no dependency changes are detected, reuse the cached node_modules folder.
+
+    If changes are detected (added/updated/removed packages), proceed with a fresh install and update the cache.
+
+Advantages:
+
+    Saves 3–5 minutes per build, especially impactful for high-frequency PR builds.
+
+    Reduces redundant network calls and I/O during builds.
+
+    Enhances overall build efficiency without compromising correctness.
+
+    Applicable across all Jenkins job types (PR, Release, and BDD Automation).
+
+These two changes together can streamline the UI build process significantly, allowing for faster development cycles, fewer bottlenecks, and more efficient resource usage.
+
+Please let me know your thoughts, and I’d be happy to take the next steps.
+
+Best regards,
+[Your Name]
+
+Let me know if you'd like me to format this into a formal document or slide as well.
+You said:
+add one line at the end that to do a POC on above proposed solutions you need to have a decicated support from DARE team 
+ChatGPT said:
+
+Certainly! Here's the revised closing of the email with the added line:
+
+These two changes together can streamline the UI build process significantly, allowing for faster development cycles, fewer bottlenecks, and more efficient resource usage.
+
+Please let me know your thoughts, and I’d be happy to take the next steps.
+
+To initiate a POC on the above proposed solutions, dedicated support from the DARE team will be required.
