@@ -1,3 +1,17 @@
+Thanks for the detailed questions and feedback. Please find my responses below:
+
+For PR and release builds, we’ll need support from the DARE team since we don’t have access to configure Jenkins directly. Therefore, we cannot estimate exact time savings without collaborating with them.
+For BDD Jenkins jobs, we tried a quick workaround by tweaking the job without deleting the workspace. We observed a time savings of approximately 15–20 minutes by skipping npm install.
+Regarding cache management:
+
+Yes, if we have different Jenkins jobs for each environment (e.g., RVQA, HQA), we will need to maintain separate cache folders for each, as the package-lock.json may vary across branches (feature, develop, RQA, etc.).
+However, we propose caching only for active versions (e.g., develop, release) and not for stale or obsolete branches. The cache for a branch will be overwritten with the latest node_modules if any package update is detected.
+The typical size of node_modules ranges between 600MB to 900MB depending on the application. Based on current usage, this is manageable. We can also explore adding clean-up scripts to manage disk space proactively if needed.
+
+
+
+
+
 Subject: Optimized and Compliant Approach to Reduce Build Time
 
 Hi [Recipient's Name],
