@@ -1,3 +1,18 @@
+Hi All,
+
+While debugging the issue, I noted the following:
+
+FE Update Required: The WFSearchableDropdown component should auto-select the default value if only one option is available. Currently, the UI framework only sets the default option, but not the value.
+Edge Case Handling: The application dispatches updateField to set the value when a single option exists. However, we need to ensure that when the value is set, the message field is explicitly set to an empty string "" (not undefined). Currently, message defaults to undefined.
+Why should message be set to ""?
+On blur of WFSearchableDropdown, the framework checks if message is undefined and sets showMessage = true. Application logic then disables the submit button. To avoid this, we need to explicitly set message to "".
+
+Alternative:
+We could modify the showMessage condition to handle both undefined and "", but since the current logic is tested and verified, the above approach is more practical for now.
+
+I’ve made the necessary changes in this PR for reference.
+
+
 Thanks for the detailed questions and feedback. Please find my responses below:
 
 For PR and release builds, we’ll need support from the DARE team since we don’t have access to configure Jenkins directly. Therefore, we cannot estimate exact time savings without collaborating with them.
