@@ -1,3 +1,15 @@
+First of all, I would like to thank my managers for trusting my skills and supporting me throughout the year.
+
+From the start of the year, I have been trying to get some good and challenging work for the team by following up with business and managers. But still, we are not getting the kind of work that can really help the team grow and contribute better. I hope this can be looked into and solved soon.
+
+Also, I have been asked to change projects multiple times, which sometimes creates confusion and brings doubt about my role and capabilities. It becomes difficult to focus and show consistent output.
+
+In the current project, I am working as an individual contributor, but at the same time, I am expected to take full ownership and come up with new ideas and initiatives. This is not matching with the lead role expectations, where I should be managing and guiding a team along with taking technical responsibilities.
+
+Still, it’s just mid of the year, and I am hopeful for better opportunities ahead. I am looking forward to getting a more stable and challenging lead role where I can use my skills properly and also spend more time on AI-related initiatives.
+
+
+
 AI-Driven UI Component Generation from Design Assets
 One of the primary areas of focus is to design and implement an AI agent capable of analyzing Figma design files and generating corresponding UI components using a predefined UI framework (e.g., React, Angular, Flutter). This initiative aims to:
 Automate front-end development workflows
