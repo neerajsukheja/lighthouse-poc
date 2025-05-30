@@ -1,3 +1,24 @@
+AI-Driven UI Component Generation from Design Assets
+One of the primary areas of focus is to design and implement an AI agent capable of analyzing Figma design files and generating corresponding UI components using a predefined UI framework (e.g., React, Angular, Flutter). This initiative aims to:
+Automate front-end development workflows
+Enhance design-to-code accuracy
+Reduce manual development time
+Improve collaboration between design and engineering teams
+The goal is to create a scalable internal tool or framework that can be integrated into existing development pipelines.
+Author and Submit White Papers
+Plan to contribute to thought leadership by authoring and submitting white papers on topics related to AI in software engineering, intelligent automation, and developer productivity tools. These papers will focus on:
+Real-world use cases and solutions
+Architectural patterns and lessons learned
+Evaluations of AI/ML tools in software delivery pipelines
+This effort supports both internal knowledge building and external visibility for the organization within the tech community.
+Conduct Technical Sessions and Knowledge Sharing
+Intend to initiate and lead regular tech talk sessions for the team to foster a strong culture of continuous learning and innovation. These sessions will focus on:
+Emerging technologies (e.g., GenAI, LLMOps, Copilot integrations)
+Internal project showcases
+Best practices in architecture, testing, and automation
+The objective is to upskill team members, drive engagement, and promote cross-team collaboration.
+
+
 AI Innovation at Hackathon 2025
 Successfully participated in Hackathon 2025 and developed an AI agent to perform data profiling for transaction regulations. The solution effectively streamlined regulatory compliance processes by leveraging machine learning algorithms to identify and categorize transaction types. The project was well-received for its innovation and practical applicability in real-world enterprise systems.
 Resolved Long-standing Technical Issue in WebView
