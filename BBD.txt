@@ -1,3 +1,46 @@
+/**
+ * Safely parses an Axios response (JSON or plain text).
+ * @param {Object} response - Axios response object
+ * @returns {any} Parsed JSON or raw text
+ */
+function safeParseResponse(response) {
+  const contentType = response.headers['content-type'];
+
+  if (contentType && contentType.includes('application/json')) {
+    try {
+      return JSON.parse(response.data);
+    } catch (err) {
+      console.warn('⚠️ Invalid JSON:', err.message);
+      return response.data; // fallback to raw text
+    }
+  }
+
+  // Not JSON, return as-is
+  return response.data;
+}
+
+
+import axios from 'axios';
+
+axios.request(config)
+  .then(response => {
+    const data = safeParseResponse(response);
+    console.log('✅ Parsed response:', data);
+  })
+  .catch(error => {
+    console.error('❌ Request error:', error.message);
+    if (error.response) {
+      const fallbackData = safeParseResponse(error.response);
+      console.warn('⚠️ Error response content:', fallbackData);
+    }
+  });
+
+
+
+
+
+
+
 Updated saved memory
 Perfect! You're approaching this challenge with the right mindset — the core evaluation is on how well you engineer Copilot prompts to generate secure, complete, and test-covered functionality.
 
