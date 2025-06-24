@@ -1,3 +1,16 @@
+Hi Chris,
+
+Thanks a ton for the prompt response and for digging into the WebdriverIO and BrowserStack code — clearly you have some elite-level debugging ninja skills! 😄
+
+Just wanted to confirm that we’ve done all the troubleshooting we possibly could from our side — we've poked, prodded, and even sweet-talked the uploadCrashReport() into behaving, but no luck. The mysterious “OK” string pretending to be valid JSON still haunts our logs.
+
+We totally agree with your theory and appreciate the deep dive you took into the WebdriverIO repo. If it’s feasible, could we kindly request you to push the updated WebdriverIO release a day or two before your PTO? That would give us a chance to test and validate if the fix resolves the issue while you’re still around (just in case the crash report ghosts try anything sneaky again 😅).
+
+Thanks again for all your help — really appreciate your support!
+
+
+
+
 /**
  * Safely parses an Axios response (JSON or plain text).
  * @param {Object} response - Axios response object
