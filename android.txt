@@ -1,0 +1,107 @@
+<!-- res/layout/item_user_status.xml -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="@android:color/white">
+
+    <!-- Name -->
+    <TextView
+        android:id="@+id/tvName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Sam Smith"
+        android:textStyle="bold"
+        android:textSize="18sp" />
+
+    <!-- Zelle Access Info -->
+    <TextView
+        android:id="@+id/tvAccessInfo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Zelle® access enabled"
+        android:textSize="14sp"
+        android:paddingTop="4dp" />
+
+    <!-- Status and Button Row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="space_between"
+        android:paddingTop="8dp">
+
+        <TextView
+            android:id="@+id/tvStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Enabled"
+            android:textColor="@android:color/holo_green_dark"
+            android:layout_marginEnd="16dp"/>
+
+        <Button
+            android:id="@+id/btnAction"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Disable"/>
+    </LinearLayout>
+</LinearLayout>
+
+
+
+data class UserAccess(
+    val name: String,
+    val accessInfo: String,
+    val isEnabled: Boolean,
+    val enabledBy: String,
+    val date: String
+)
+
+
+val mockUsers = listOf(
+    UserAccess("Sam Smith", "Zelle® access enabled", true, "", ""),
+    UserAccess("Emma Smith", "Zelle® access enabled by Alex Smith", true, "Alex Smith", "June 28th, 2025"),
+    UserAccess("Julia Smith", "Zelle® access enabled by GENE SMITH", true, "GENE SMITH", "January 1st, 2025"),
+    UserAccess("Tony Smith", "Zelle® access disabled by GENE SMITH", false, "GENE SMITH", "January 1st, 2025")
+)
+
+
+class UserAccessAdapter(private val userList: List<UserAccess>) :
+    RecyclerView.Adapter<UserAccessAdapter.UserViewHolder>() {
+
+    inner class UserViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        val tvName = itemView.findViewById<TextView>(R.id.tvName)
+        val tvAccessInfo = itemView.findViewById<TextView>(R.id.tvAccessInfo)
+        val tvStatus = itemView.findViewById<TextView>(R.id.tvStatus)
+        val btnAction = itemView.findViewById<Button>(R.id.btnAction)
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): UserViewHolder {
+        val view = LayoutInflater.from(parent.context)
+            .inflate(R.layout.item_user_status, parent, false)
+        return UserViewHolder(view)
+    }
+
+    override fun onBindViewHolder(holder: UserViewHolder, position: Int) {
+        val user = userList[position]
+
+        holder.tvName.text = user.name
+        holder.tvAccessInfo.text = user.accessInfo +
+            if (user.enabledBy.isNotEmpty()) " on ${user.date}" else ""
+
+        holder.tvStatus.text = if (user.isEnabled) "Enabled" else "Disabled"
+        holder.tvStatus.setTextColor(
+            if (user.isEnabled) Color.GREEN else Color.RED
+        )
+
+        holder.btnAction.text = if (user.isEnabled) "Disable" else "Enable"
+    }
+
+    override fun getItemCount() = userList.size
+}
+
+
+val recyclerView = findViewById<RecyclerView>(R.id.recyclerView)
+recyclerView.layoutManager = LinearLayoutManager(this)
+recyclerView.adapter = UserAccessAdapter(mockUsers)
