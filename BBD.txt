@@ -1,20 +1,182 @@
-Ram
-Thank you for always being there whenever I’m stuck, whether it’s technical or not. Your support means a lot. I really appreciate how you guide us with honest feedback—both good and where we can improve—and always suggest ways to get better. You motivate me to push myself and grow in my career. Also, the way you create a friendly and comfortable environment makes it so much easier to talk and work together. Truly grateful to have you as a manager!
+import React from "react";
+import {
+  Drawer,
+  Box,
+  Typography,
+  IconButton,
+  Stepper,
+  Step,
+  StepLabel,
+  TextField,
+  Button,
+  MenuItem,
+} from "@mui/material";
+import CancelOutlinedIcon from "@mui/icons-material/CancelOutlined";
 
+interface CreateStoryProps {
+  open: boolean;
+  onClose: () => void;
+  onAccepted: () => void;
+  issueKey: string;
+}
 
-Jeena
-Big thanks for always being such a strong technical support on the team. I’ve really enjoyed teaming up with you during the hackathons—your attention to detail and full involvement made a huge difference. Your cheerful attitude brings such a positive vibe to the team, and it's truly appreciated. Also, the way you go above and beyond during all the transfer projects shows your dedication and commitment. It’s a pleasure to work with someone like you!
+const steps = [
+  "Story Details",
+  "Prompt & Context",
+  "AI Generated Draft",
+  "Review & Finalize",
+];
 
-Arabinda
-Your strong technical skills and calm, helpful nature really stand out. You're always there to support the team when any technical issues come up, and you handle every challenge with a smile and patience. The ownership you take in your work makes a big impact—I can clearly see you growing into a lead role in the future. Also, your key contribution to the Wires Application fusion migration was a major achievement. Great job, and keep up the fantastic work!
+export default function CreateStory({
+  open,
+  onClose,
+  onAccepted,
+  issueKey,
+}: CreateStoryProps) {
+  const [activeStep, setActiveStep] = React.useState(0);
 
+  const handleNext = () => {
+    if (activeStep < steps.length - 1) {
+      setActiveStep((prev) => prev + 1);
+    } else {
+      onAccepted();
+    }
+  };
 
+  const handleBack = () => {
+    if (activeStep > 0) {
+      setActiveStep((prev) => prev - 1);
+    }
+  };
 
-I just want to say how proud I am to work with all of you. The way each one of you has shown such strong technical skills and dedication in everything we've worked on together has been truly amazing. Your teamwork, positive attitude, and willingness to step up when needed make a big difference. It’s inspiring to see how you handle challenges and still keep things moving forward smoothly. Keep doing what you’re doing—you all have a bright path ahead!
+  return (
+    <Drawer
+      anchor="right"
+      open={open}
+      onClose={onClose}
+      variant="temporary"
+      sx={{
+        "& .MuiDrawer-paper": {
+          width: "900px",
+          maxWidth: "100%",
+          height: "100%",
+          display: "flex",
+          flexDirection: "column",
+        },
+      }}
+    >
+      {/* Header */}
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          p: 2,
+          borderBottom: 1,
+          borderColor: "divider",
+        }}
+      >
+        <Typography variant="h6" fontWeight="bold">
+          Create New Story
+        </Typography>
+        <IconButton onClick={onClose} size="small">
+          <CancelOutlinedIcon />
+        </IconButton>
+      </Box>
 
+      {/* Body */}
+      <Box sx={{ flex: 1, display: "flex", overflow: "hidden" }}>
+        {/* Left Sidebar (Stepper) */}
+        <Box
+          sx={{
+            width: 220,
+            borderRight: 1,
+            borderColor: "divider",
+            p: 2,
+          }}
+        >
+          <Stepper
+            activeStep={activeStep}
+            orientation="vertical"
+            sx={{ height: "100%" }}
+          >
+            {steps.map((label) => (
+              <Step key={label}>
+                <StepLabel>{label}</StepLabel>
+              </Step>
+            ))}
+          </Stepper>
+        </Box>
 
-Arti
-Huge thanks to you for leading the funding efforts in the DIBS application so confidently—you really took charge from the front. It’s truly inspiring how, even after returning from maternity leave, you managed everything so smoothly and responsibly. You set a great example for all working mothers. I also want to thank you for helping me understand the project so well—your support made things much easier for me. You're always there when the team needs you, and that kind of reliability is something I really admire.
+        {/* Right Form Content */}
+        <Box sx={{ flex: 1, p: 4 }}>
+          {activeStep === 0 && (
+            <>
+              <Typography variant="h6" gutterBottom>
+                Story Details
+              </Typography>
+              <Box sx={{ display: "grid", gap: 3, maxWidth: 600 }}>
+                <TextField
+                  select
+                  label="Project"
+                  value="CMLD"
+                  size="small"
+                  fullWidth
+                >
+                  <MenuItem value="CMLD">CMLD</MenuItem>
+                </TextField>
 
-Ramakanth
-Really appreciate the strong technical expertise you bring, especially in UI automation—it’s been a big asset for the team. The way you implemented the multiRemote testing feature in the BDD application was impressive. It was a tough task, but you pulled it off so smoothly. Also, thanks a lot for helping me with the UI automation framework upgrade—your support made it much easier. And I truly enjoyed the time we spent together in Bengaluru working side by side. It was a great example of peer programming at its best!
+                <TextField
+                  select
+                  label="Issue Type"
+                  value="Story"
+                  size="small"
+                  fullWidth
+                >
+                  <MenuItem value="Story">Story</MenuItem>
+                </TextField>
+
+                <TextField
+                  select
+                  label="Feature"
+                  value="CMLAD-1234"
+                  size="small"
+                  fullWidth
+                >
+                  <MenuItem value="CMLAD-1234">CMLAD-1234</MenuItem>
+                </TextField>
+
+                <TextField
+                  label="Add your description / Requirement"
+                  placeholder="Min. 5 characters"
+                  multiline
+                  minRows={4}
+                  fullWidth
+                />
+              </Box>
+            </>
+          )}
+        </Box>
+      </Box>
+
+      {/* Footer Buttons */}
+      <Box
+        sx={{
+          p: 2,
+          borderTop: 1,
+          borderColor: "divider",
+          display: "flex",
+          justifyContent: "flex-end",
+          gap: 2,
+        }}
+      >
+        <Button onClick={onClose} variant="outlined">
+          Cancel
+        </Button>
+        <Button onClick={handleNext} variant="contained" color="primary">
+          {activeStep === steps.length - 1 ? "Finish" : "Next"}
+        </Button>
+      </Box>
+    </Drawer>
+  );
+}
